@@ -1,7 +1,8 @@
 # Ideas Studio
-# Extension for OpenChamber v2
+## Extension for OpenChamber v2
+(Inspired by Google's Gemini Notebook and SurfSense)
 
-Turn your notes into study material and documents with one tap. SurfSense Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
+Turn your notes into study material and documents with one tap. Ideas Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
 
 It is built for everyone. A curious ten-year-old should be able to use it, and so should a history professor who knows nothing about AI, or someone who is not comfortable with computers. Pick your files, tap a tile, open the result, save it. Studio uses plain words without talking down to anyone, chooses sensible defaults, and quietly recovers from most problems. Technical details are there for people who want them, under **About this**.
 
