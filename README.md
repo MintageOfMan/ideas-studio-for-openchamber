@@ -1,4 +1,5 @@
-# SurfSense Studio for OpenChamber v2
+# Ideas Studio
+# Extension for OpenChamber v2
 
 Turn your notes into study material and documents with one tap. SurfSense Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
 
