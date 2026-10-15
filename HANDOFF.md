@@ -1,0 +1,3 @@
+- Need to rename `SurfSense Studio` to `Ideas Studio`.
+- Need to remove references to `SurfSense` from code except where necessary.
+- This project has diverged a lot from `SurfSense` at this point. Only the inspiration probably remains.
