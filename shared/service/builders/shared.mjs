@@ -2,7 +2,7 @@
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { provenanceLine, sourceNamesOf } from '../../common/provenance.mjs';
 
-export const GENERATOR = 'SurfSense Studio for OpenChamber v2';
+export const GENERATOR = 'Ideas Studio for OpenChamber v2';
 
 // What the builders may print about a file's origin: plain source names and the date only.
 export function fileMeta(record) {

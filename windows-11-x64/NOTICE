@@ -1,16 +1,22 @@
-SurfSense Studio for OpenChamber v2
+Ideas Studio for OpenChamber v2
 Copyright 2026 TheMintageOfMan
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
 
-This product includes material adapted from SurfSense
-(https://github.com/MODSetter/SurfSense), commit
-7fb479c361414e1ffd180860eb0b5eb5afb0c4e3, Copyright (c) SurfSense, licensed
-under the Apache License, Version 2.0. The prompt rules and reply shapes for
-Flashcards, Quiz, Mind map and Web page were adapted and modified; each adapted
-file in shared/common/ states its source and the changes made. No code from
-SurfSense's Business Source License directory (surfsense_backend/app/proprietary/)
-is used. SurfSense publishes no NOTICE file at that commit.
+Ideas Studio is an independent extension inspired by Google's NotebookLM
+(https://notebooklm.google.com/), Gemini (https://gemini.google.com/), and
+SurfSense (https://github.com/MODSetter/SurfSense). It does not bundle or
+require either inspiration's application or backend.
+
+Historical attribution is retained for the initial prompt/reply-shape
+adaptations in Flashcards, Quiz, Mind map and Web page, documented in their
+shared/common/ source headers: SurfSense commit
+7fb479c361414e1ffd180860eb0b5eb5afb0c4e3, Copyright (c) SurfSense, Apache
+License, Version 2.0. The license text is retained in
+shared/licenses/SurfSense-LICENSE.txt and the distributed third-party notices.
+No code from SurfSense's Business Source License directory
+(surfsense_backend/app/proprietary/) is used. SurfSense publishes no NOTICE
+file at that commit. These credits do not name the product or imply affiliation.
 
 The distributed platform folders bundle third-party JavaScript packages under
 their own licenses (MIT, ISC, BSD-2-Clause, BSD-3-Clause, 0BSD, Zlib, and
@@ -23,6 +29,6 @@ Copyright (c) 2016 The Inter Project Authors, licensed under the SIL Open Font
 License, Version 1.1 (shared/fonts/Inter-LICENSE.txt). The font is not covered
 by the Apache License; it remains under the SIL Open Font License.
 
-"SurfSense", "OpenChamber", "OpenCode", "NotebookLM" and other names are
+"SurfSense", "OpenChamber", "OpenCode", "NotebookLM", "Gemini" and other names are
 trademarks of their respective owners. This project is independent and is not
 affiliated with or endorsed by any of them.

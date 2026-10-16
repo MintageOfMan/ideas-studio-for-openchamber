@@ -1,6 +1,6 @@
 # Ideas Studio
 ## Extension for OpenChamber v2
-(Inspired by Google's Gemini Notebook and SurfSense)
+Inspired by [Google NotebookLM](https://notebooklm.google.com/) and [SurfSense](https://github.com/MODSetter/SurfSense).
 
 Turn your notes into study material and documents with one tap. Ideas Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
 
@@ -71,9 +71,11 @@ Studio is installed as a folder. Users do not install Node, Python, Office or an
 
 Keep the folder where it is: OpenChamber runs the extension from that location. Do not add the repository root as an extension.
 
+**Breaking identity change:** the extension name is **Ideas Studio** and its ID is `ideas-studio-v2`. Add it as a new extension and disable the earlier installation if present. Saved host-side extension preferences do not automatically migrate. Existing per-project `.studio/` history is unchanged and remains available when you open the same project.
+
 ## Use
 
-1. Open a chat in a project, then open **SurfSense Studio** from the right-hand rail.
+1. Open a chat in a project, then open **Ideas Studio** from the right-hand rail.
 2. Under **Sources**, tick the files to use, and **This chat** if you want the conversation included. Studio ticks a sensible set of files for you and remembers your choice. It will not let you tick more text than it can send.
 3. Tap a tile to make something with the default settings. Or tap the tile's **Options** button to choose one simple setting and, if you like, say what to focus on.
 4. Your item appears under **Your creations** with a spinner, then a "ready" message. You can make up to three things at once.
@@ -164,12 +166,15 @@ npm run build   # rebuilds windows-11-x64/ and linux-fedora-amd64/
 
 Studio stands on the work of many people. Thank you all.
 
-**Inspiration and foundations**
+**Inspiration and independent development**
 
-- [SurfSense](https://github.com/MODSetter/SurfSense) by MODSetter and contributors: the Studio concept and its twelve formats. The prompt rules and reply shapes for Flashcards, Quiz, Mind map and Web page are adapted from SurfSense under the Apache License 2.0; each adapted file names its source.
+- [Google NotebookLM](https://notebooklm.google.com/) and [Gemini](https://gemini.google.com/): inspiration for source-grounded study materials and the simple panel of tiles and creations. No NotebookLM or Gemini application code or assets are included.
+- [SurfSense](https://github.com/MODSetter/SurfSense) by MODSetter and contributors: early inspiration for the source-to-study-material workflow and range of formats. Ideas Studio is an independent extension with its own architecture, implementation decisions, and document builders; it does not bundle or require the SurfSense application or backend. Historical attribution for the initial Flashcards, Quiz, Mind map, and Web page prompt/reply-shape adaptations remains in their source headers and [NOTICE](NOTICE), with the applicable Apache-2.0 license text retained.
+
+**Host applications**
+
 - [OpenChamber](https://github.com/openchamber/openchamber): the host application, its extension SDK and UI kit (`@openchamber/sdk`, MIT).
 - [OpenCode](https://github.com/sst/opencode): the agent runtime and model connection Studio generates through.
-- [Google NotebookLM](https://notebooklm.google.com/): the design inspiration for the simple Studio panel of tiles and creations. No NotebookLM code or assets are used.
 
 **Libraries bundled in the extension**
 

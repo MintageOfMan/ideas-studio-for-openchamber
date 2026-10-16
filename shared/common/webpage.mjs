@@ -41,7 +41,7 @@ export function buildWebPage(page, meta, fontCss = '') {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; font-src data:">
-<meta name="generator" content="SurfSense Studio for OpenChamber v2">
+<meta name="generator" content="Ideas Studio for OpenChamber v2">
 <title>${escapeHtml(page.title)}</title>
 <style>
 ${fontCss}

@@ -1,4 +1,4 @@
-# SurfSense Studio for OpenChamber v2
+# Ideas Studio for OpenChamber v2
 
 ## High-level product and architecture specification
 
@@ -10,7 +10,7 @@
 
 ## 1. Purpose
 
-Create an independently distributed, optional OpenChamber extension that turns selected sources into the 12 Studio formats offered by SurfSense. Reuse suitable SurfSense concepts and code without requiring the SurfSense application or embedding its entire backend.
+Create an independently developed and distributed, optional OpenChamber extension that turns selected sources into the 12 study, document, and media formats below. Google's NotebookLM/Gemini and SurfSense are inspirations, not application or backend dependencies. Ideas Studio owns its architecture, implementation decisions, and builders; retain the scoped historical source attribution and third-party licenses documented in NOTICE.
 
 The extension should feel native to OpenChamber while owning its generation workflow, interactive viewers, artifact history, and runtime components.
 
@@ -18,7 +18,7 @@ The extension should feel native to OpenChamber while owning its generation work
 
 1. **Optional extension, not an OpenChamber feature bundled at setup.** Install, version, release, enable, and disable Studio independently. No OpenChamber installer changes, core fork, or mandatory inclusion in OpenChamber.
 2. **Platform-specific distribution.** Produce separate packages for supported OS/CPU combinations, sharing one codebase, extension identity, version scheme, and feature contract.
-3. **Self-contained means no separately installed software prerequisites.** Users must not install Python, Node, Docker, Microsoft Office, LibreOffice, SurfSense, a separate OpenCode plugin, or a separately managed backend to use Studio.
+3. **Self-contained means no separately installed software prerequisites.** Users must not install Python, Node, Docker, Microsoft Office, LibreOffice, another study application, a separate OpenCode plugin, or a separately managed backend to use Studio.
 4. **Networked models are expected.** Text and image generation can use configured external model endpoints. Self-contained does not mean offline, anonymous, or free of provider credentials and usage charges.
 5. **Dependencies are Studio-owned.** Bundle required components or, where explicitly supported, download complete runtime packs through Studio itself. No user-run package-manager commands or compilation.
 6. **Kokoro is an optional post-install download.** Do not include its runtime/model payload in the base extension. A user chooses when to install the complete audio pack through Studio.
@@ -41,7 +41,7 @@ The extension should feel native to OpenChamber while owning its generation work
 
 ### Not included
 
-- A full SurfSense installation, notebook database, crawler, connector catalog, embedding system, or retrieval platform.
+- A separate study application, notebook database, crawler, connector catalog, embedding system, or retrieval platform.
 - Full Word, PowerPoint, or Excel editing inside OpenChamber. Editable output files and previews are required; an embedded Office suite is not.
 - Bundled text-generation or image-generation model weights, GPU drivers, or a new general-purpose model server.
 - A bundled Python runtime or frozen Python worker.
@@ -111,7 +111,7 @@ The source contract is normalized text plus a source locator. Implemented inputs
 - Read only sources the user selected or explicitly granted to the extension. Opening a panel does not grant unrestricted conversation access.
 - Use OpenChamber's message/session actions and conversation capability for session content. Detect and disclose incomplete or truncated host snapshots.
 - Record which sources and source versions were used. Preserve readable source references in artifacts where the format permits.
-- Do not silently apply SurfSense's current 24,000-character excerpting policy and describe the result as full-document coverage.
+- Do not silently excerpt sources and describe the result as full-document coverage.
 - When sources exceed supported context, use a disclosed multi-pass strategy or require a narrower selection. Report processed versus selected coverage and any omissions.
 - Treat source text as material to analyze, not instructions authorizing execution or additional access. Do not fabricate source data or fill spreadsheet gaps with invented values.
 
@@ -131,7 +131,7 @@ Responsibilities: authenticated host communication, jobs, model adapters, docume
 
 ### C. Document builders
 
-Trusted JavaScript builders inside the service render validated structured model output into DOCX, PPTX, XLSX, and PDF files with bundled libraries and fonts. There is no Python runtime, Office automation, LibreOffice conversion, Docker, or model-written code. Do not copy SurfSense's unsandboxed Office/PDF `exec()` runner.
+Trusted JavaScript builders inside the service render validated structured model output into DOCX, PPTX, XLSX, and PDF files with bundled libraries and fonts. There is no Python runtime, Office automation, LibreOffice conversion, Docker, or model-written code. Never execute model-generated document-building code.
 
 - The model returns JSON in a format-specific shape. Studio validates it, discloses omitted or capped items, and fails without saving when the reply is unusable.
 - Builders are deterministic for a given artifact. Generated files live in the project's Studio history and are exported by exclusive creation, never overwriting user files.
@@ -198,7 +198,7 @@ Large-file preview/export must use a proven host-compatible path, such as servic
 - Make storage locations visible. Disabling Studio stops its processes; deleting generated content or packs requires explicit user confirmation.
 - Send source material only to model endpoints selected for the operation. Do not expose service tokens, credentials, or source text in diagnostic logs. No unrelated telemetry is required.
 - Validate model output and escape/sandbox generated HTML. Do not execute source-supplied commands or model-written code. Missing optional capabilities must fail locally to that feature, not prevent Studio from opening.
-- Studio is licensed under Apache-2.0 (LICENSE, NOTICE; copyright TheMintageOfMan). Preserve relevant Apache-2.0 notices and modification attribution for reused SurfSense Studio code and applicable OpenChamber/SDK notices. Exclude unrelated proprietary SurfSense code.
+- Ideas Studio is licensed under Apache-2.0 (LICENSE, NOTICE; copyright TheMintageOfMan). Preserve the scoped historical SurfSense prompt/reply-shape attribution, applicable OpenChamber/SDK notices, and all bundled third-party licenses. Inspiration acknowledgements do not imply affiliation or an application dependency.
 - Ship license text for every bundled library and font; the build fails when a bundled package lacks it. Review redistribution rights for every model and voice. Retaining eSpeak-ng introduces GPL distribution obligations; permissive licensing of Studio source does not eliminate those obligations.
 
 ## 12. Acceptance criteria
@@ -208,7 +208,7 @@ Release qualification must cover every advertised OS/architecture and all 12 for
 | Area | Required evidence |
 |---|---|
 | Independent installation | Install and run as an optional extension on a clean supported OpenChamber host, without modifying OpenChamber setup or core code. |
-| No external installations | No system Python, separate Node installation, Docker, Office, LibreOffice, SurfSense, separately installed plugin, or manually managed backend is required. |
+| No external installations | No system Python, separate Node installation, Docker, Office, LibreOffice, other study application, separately installed plugin, or manually managed backend is required. |
 | Platform packaging | Correct platform guard and optional pack selection, declared OS/CPU compatibility, bundled fonts, and working paths on each advertised target. |
 | Format coverage | F01-F12 each produce the specified real result from supplied sources. Office files are editable and open in compatible applications, not slide/page screenshots; interactive viewers behave as specified. |
 | Models | Text and image routes use intended providers with correct authentication. Long-job behavior is not falsely represented as supported by the Small Model shortcut alone. |
@@ -250,13 +250,14 @@ This sequence does not remove any format from the complete product scope.
 - Additional source input formats, if any, beyond text/Markdown and selected conversation snapshots.
 - Release artifact naming, dependency redistribution materials, and upgrade/data-retention behavior.
 
-## 14. Source basis
+## 14. Inspiration and technical references
 
-Source inspection used SurfSense commit `7fb479c361414e1ffd180860eb0b5eb5afb0c4e3` and OpenChamber commit `de84da29e9a742e10a64af102119f125fb4471af`. The requirements above include intentional design changes; they are not a claim that upstream already implements this extension.
+Early research considered SurfSense commit `7fb479c361414e1ffd180860eb0b5eb5afb0c4e3` and OpenChamber commit `de84da29e9a742e10a64af102119f125fb4471af`. These are background references, not the product's architecture or a claim of affiliation. Ideas Studio's requirements and implementation are maintained independently; NOTICE preserves the documented historical adaptations and third-party credits.
 
+- [Google NotebookLM](https://notebooklm.google.com/) and [Gemini](https://gemini.google.com/) - inspiration for source-grounded study and creation workflows
 - [SurfSense Studio architecture and all 12 formats](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/docs/architecture/studio.md)
 - [SurfSense native packaging and audio dependencies](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/docs/architecture/packaging.md)
-- [SurfSense Office runner being replaced](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/surfsense_local/backend/worker/studio/office/runner.py)
+- [SurfSense Office runner considered during early research, not included](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/surfsense_local/backend/worker/studio/office/runner.py)
 - [SurfSense license](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/LICENSE) and [OpenChamber license](https://github.com/openchamber/openchamber/blob/de84da29e9a742e10a64af102119f125fb4471af/LICENSE)
 - [OpenChamber extension SDK](https://docs.openchamber.dev/sdk/) and [Host API](https://docs.openchamber.dev/sdk/host/)
 - [OpenChamber local-service contract](https://github.com/openchamber/openchamber/blob/de84da29e9a742e10a64af102119f125fb4471af/packages/sdk/GUEST_SERVICES.md)

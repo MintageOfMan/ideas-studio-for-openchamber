@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { version, description } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const { name, version, description } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const targets = [
   { folder: 'windows-11-x64', platform: 'win32', arch: 'x64' },
   { folder: 'linux-fedora-amd64', platform: 'linux', arch: 'x64' },
@@ -38,8 +38,8 @@ async function licenses(inputs) {
   }
   entries.push([
     'SurfSense (https://github.com/MODSetter/SurfSense), commit 7fb479c361414e1ffd180860eb0b5eb5afb0c4e3',
-    'Apache-2.0 portions only. Prompt rules and reply shapes for Flashcards, Quiz, Mind map and Web page',
-    'were adapted and modified; see the header of each file in shared/common/. No code from',
+    'Historical attribution for the initial Apache-2.0 prompt/reply-shape adaptations in',
+    'Flashcards, Quiz, Mind map and Web page; see their headers in shared/common/. No code from',
     'surfsense_backend/app/proprietary/ is used. The upstream license file follows verbatim.',
     '',
   ].join('\n'));
@@ -86,12 +86,13 @@ for (const target of targets) {
     await fs.copyFile(path.join(root, 'shared/panel', file), path.join(directory, 'panel', file));
   }
   const manifest = {
-    name: 'surfsense-studio-for-openchamber', version, private: true, type: 'module', description, license: 'Apache-2.0',
+    name, version, private: true, type: 'module', description, license: 'Apache-2.0',
     studioPlatform: { os: target.platform, arch: target.arch },
     openchamber: {
       apiVersion: 1, engines: { openchamber: '>=2.1.1' },
       contributes: {
-        panel: { id: 'surfsense-studio-v2', name: 'SurfSense Studio', icon: 'panel/icon.svg', entry: 'panel/index.html' },
+        // Deliberately use a new installation identity; old host preferences are not migrated.
+        panel: { id: 'ideas-studio-v2', name: 'Ideas Studio', icon: 'panel/icon.svg', entry: 'panel/index.html' },
         page: true, capabilities: ['files'],
         service: { entry: 'service/main.js', runtime: 'host' },
       },

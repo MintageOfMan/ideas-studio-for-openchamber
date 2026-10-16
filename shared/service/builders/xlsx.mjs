@@ -17,7 +17,7 @@ export async function buildXlsx(artifact, meta) {
     stickyRowsCount: 1,
   }));
   const info = [
-    ['Title', artifact.title], ['Made from', meta.source], ['Made on', madeOn(meta.createdAt)], ['Made with', 'SurfSense Studio'],
+    ['Title', artifact.title], ['Made from', meta.source], ['Made on', madeOn(meta.createdAt)], ['Made with', 'Ideas Studio'],
     ['Please note', 'Check it against the original before relying on it.'],
     [null, null],
     ...artifact.tables.map((table) => [`Sheet: ${table.name}`, table.description || null]),

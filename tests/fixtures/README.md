@@ -7,3 +7,5 @@ Small files saved by Microsoft Office (Word, PowerPoint and Excel) from short, m
 - `trips.xls` and `trips.xlsx`: the same workbook in both formats, with dates, a time, a date-time, formulas and a second sheet.
 
 The script that made `small.doc` and `small.ppt` was `temp/legacy/make-fixtures.ps1` (not committed). The workbook was built with Excel automation in the same way.
+
+These are synthetic, public test samples, not real documents or trip records. Their author/company properties, sensitivity-label properties, revision-author identities, and machine-specific save paths have been neutralized. Document text, slide notes, tables, spreadsheet formulas, and cached results are preserved and checked by `tests/legacy.test.mjs`. Review this metadata before replacing a fixture or saving it again in a desktop Office installation.

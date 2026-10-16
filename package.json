@@ -1,10 +1,10 @@
 {
-  "name": "surfsense-studio-for-openchamber",
+  "name": "ideas-studio-for-openchamber",
   "version": "0.2.0",
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
-  "description": "SurfSense Studio for OpenChamber v2 - text formats development build",
+  "description": "Ideas Studio for OpenChamber v2 - study materials and documents development build",
   "engines": {
     "node": ">=22"
   },

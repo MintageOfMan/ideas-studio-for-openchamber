@@ -10,4 +10,4 @@ export function sourceNamesOf(record) {
 // A fixed locale keeps rebuilt files byte-identical on every machine.
 export const madeOn = (createdAt) => new Date(createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' });
 
-export const provenanceLine = (names, createdAt) => `Made with SurfSense Studio from ${names} on ${madeOn(createdAt)}. Check it against the original before relying on it.`;
+export const provenanceLine = (names, createdAt) => `Made with Ideas Studio from ${names} on ${madeOn(createdAt)}. Check it against the original before relying on it.`;
