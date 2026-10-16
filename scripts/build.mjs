@@ -2,9 +2,10 @@ import { build } from 'esbuild';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { dependencyLicenses } from './dependency-licenses.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const { name, version, description } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
+const { name, version, description, openchamber } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
 const targets = [
   { folder: 'windows-11-x64', platform: 'win32', arch: 'x64' },
   { folder: 'linux-fedora-amd64', platform: 'linux', arch: 'x64' },
@@ -20,22 +21,7 @@ function bundledInputs(...results) {
 }
 
 async function licenses(inputs) {
-  const packages = [...new Set(inputs.map((name) => name.replaceAll('\\', '/').match(/node_modules\/(@[^/]+\/[^/]+|[^/]+)/)?.[1]).filter(Boolean))].sort();
-  const entries = [];
-  for (const name of packages) {
-    const directory = path.join(root, 'node_modules', name);
-    const metadata = JSON.parse(await fs.readFile(path.join(directory, 'package.json'), 'utf8'));
-    const files = (await fs.readdir(directory)).filter((filename) => /^(license|licence|copying)(\.|-|$)/i.test(filename));
-    // A few packages publish no license file; their notice is kept in shared/licenses/ instead.
-    const vendored = path.join(root, 'shared/licenses', `${name.replace('/', '__')}-LICENSE.txt`);
-    if (!files.length && await fs.access(vendored).then(() => true, () => false)) {
-      entries.push(`${name} ${metadata.version}\n${metadata.license ?? 'See license text'}\n`, await fs.readFile(vendored, 'utf8'));
-      continue;
-    }
-    if (!files.length) throw new Error(`Missing license text for bundled dependency ${name}.`);
-    entries.push(`${name} ${metadata.version}\n${metadata.license ?? 'See license text'}\n`);
-    for (const filename of files) entries.push(await fs.readFile(path.join(directory, filename), 'utf8'));
-  }
+  const entries = await dependencyLicenses(inputs, root);
   entries.push([
     'SurfSense (https://github.com/MODSetter/SurfSense), commit 7fb479c361414e1ffd180860eb0b5eb5afb0c4e3',
     'Historical attribution for the initial Apache-2.0 prompt/reply-shape adaptations in',
@@ -46,7 +32,8 @@ async function licenses(inputs) {
   entries.push(await fs.readFile(path.join(root, 'shared/licenses/SurfSense-LICENSE.txt'), 'utf8'));
   entries.push(`Inter 4.1 (https://github.com/rsms/inter), files ${SERVICE_FONTS.join(', ')} in service/fonts/ (and the WOFF2 faces inside panel/main.js), unmodified.\nEmbedded in generated Word documents, web pages, infographics and PDFs. The upstream license file follows verbatim.\n`);
   entries.push(await fs.readFile(path.join(root, 'shared/fonts/Inter-LICENSE.txt'), 'utf8'));
-  return entries.join(SEPARATOR) + '\n';
+  // Keep upstream notice wording intact without carrying whitespace-only diff errors.
+  return entries.join(SEPARATOR).replace(/[ \t]+$/gm, '') + '\n';
 }
 
 async function inventory(directory) {
@@ -89,12 +76,11 @@ for (const target of targets) {
     name, version, private: true, type: 'module', description, license: 'Apache-2.0',
     studioPlatform: { os: target.platform, arch: target.arch },
     openchamber: {
-      apiVersion: 1, engines: { openchamber: '>=2.1.1' },
+      ...openchamber,
       contributes: {
-        // Deliberately use a new installation identity; old host preferences are not migrated.
-        panel: { id: 'ideas-studio-v2', name: 'Ideas Studio', icon: 'panel/icon.svg', entry: 'panel/index.html' },
-        page: true, capabilities: ['files'],
-        service: { entry: 'service/main.js', runtime: 'host' },
+        ...openchamber.contributes,
+        panel: { ...openchamber.contributes.panel, icon: 'panel/icon.svg', entry: 'panel/index.html' },
+        service: { ...openchamber.contributes.service, entry: 'service/main.js' },
       },
     },
   };
