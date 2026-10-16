@@ -23,19 +23,19 @@ Plan for the next working session. Read [SPEC.md](SPEC.md), [README.md](README.m
 
 | Item | Value |
 |---|---|
-| Local clone | `C:\Users\xrahman\Downloads\open_chamber_working\surfsense-studio-for-openchamber_2026-10-06_1825` |
-| GitHub | `TheMintageOfMan/surfsense-studio-for-openchamber`, default branch `main`; `gh` is authenticated |
+| Local clone | `.` (repository root; run development commands here) |
+| GitHub | `MintageOfMan/ideas-studio-for-openchamber`, default branch `main`; authenticate `gh` for your own account |
 | Dev tools | Node 24 and npm (development only), `esbuild` from `devDependencies` |
 | OpenChamber backend | `http://127.0.0.1:57123` (desktop local port); OpenCode's own port changes on restart and is not used directly |
-| Installed extension | Folder install of `windows-11-x64/`, id `surfsense-studio-v2`, grants `files` and `service` |
+| Installed extension | Ideas Studio, folder install of `windows-11-x64/`, ID `ideas-studio-v2`, grants `files` and `service`; add as a new extension |
 
 Routine:
 
 1. `npm ci --ignore-scripts --no-audit --no-fund --cache ./temp/npm-cache`, then `npm test` and `npm run build`. Edit `shared/` only; the build rewrites both platform folders.
-2. Panel changes load when the Studio panel reopens. Service changes need a service restart: back up `%USERPROFILE%\.config\openchamber\extensions.json`, then `PUT http://127.0.0.1:57123/api/guests/surfsense-studio-v2/enabled` with `{"enabled":false}` and then `{"enabled":true}`. The local helper `temp/restart-development-extension.ps1` does this; `temp/` is not committed, so recreate it in a fresh clone.
+2. Panel changes load when the Studio panel reopens. Service changes need a service restart: back up `%USERPROFILE%\.config\openchamber\extensions.json`, then `PUT http://127.0.0.1:57123/api/guests/ideas-studio-v2/enabled` with `{"enabled":false}` and then `{"enabled":true}`. The local helper `temp/restart-development-extension.ps1` does this; `temp/` is not committed, so recreate it in a fresh clone.
 3. Read-only connection check: `npm run probe -- --origin http://127.0.0.1:57123 --session <session id> --directory <clone path>`.
-4. Live generation check: `temp/live-format.mjs <format> [provider/model]` submits one job through `POST /api/guests/surfsense-studio-v2/service/request` and polls it. Its hard-coded session id is from the previous session; replace it with the new one (`OPENCODE_SESSION_ID` in an agent shell). The session must belong to the clone directory.
-5. Panel checks: open `http://127.0.0.1:57123/?session=<id>` with the Chrome DevTools tools, click the **SurfSense Studio** rail button, and act on snapshot ids. Element screenshots of nodes inside the extension iframe come out blank; take viewport screenshots instead.
+4. Live generation check: `temp/live-format.mjs <format> [provider/model]` submits one job through `POST /api/guests/ideas-studio-v2/service/request` and polls it. Its hard-coded session id is from the previous session; replace it with the new one (`OPENCODE_SESSION_ID` in an agent shell). The session must belong to the clone directory.
+5. Panel checks: open `http://127.0.0.1:57123/?session=<id>` with the Chrome DevTools tools, click the **Ideas Studio** rail button, and act on snapshot ids. Element screenshots of nodes inside the extension iframe come out blank; take viewport screenshots instead.
 
 Model notes: `amazon-bedrock/us.openai.gpt-6-astra-ultrafast` worked for every format. `amazon-bedrock/us.anthropic.claude-opus-5-5` at variant `max` returned no text for all four structured formats (about 50 seconds each, probably billed). The stateless route has no output-budget control.
 
@@ -81,7 +81,7 @@ Follow-ups:
 
 ## 7. Guardrails
 
-- No forks of SurfSense or OpenChamber; no OpenChamber installer or core changes.
+- Keep Ideas Studio independent; no OpenChamber installer or core changes.
 - No self-packaged Python; no model-written code executes.
 - Never truncate sources or bypass authentication. Text generation may make at most three calls per request (chosen model twice, then the recommended model once), each recorded; nothing else retries billable calls.
 - Keep scratch work in `temp/` and generated history in `.studio/`, both out of commits.

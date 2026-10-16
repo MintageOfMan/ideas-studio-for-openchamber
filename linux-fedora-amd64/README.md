@@ -1,4 +1,4 @@
-# Fedora amd64 development package
+# Ideas Studio - Fedora amd64 development package
 
 Built from the shared implementation with a Linux x64 runtime guard. **Not runtime-tested on Fedora.** Do not treat a successful build as Linux qualification.
 
@@ -6,6 +6,6 @@ For an explicit development trial, add this folder through OpenChamber **Setting
 
 It offers Summary, Word, Slides, Spreadsheet, Web page, PDF, Mind map, Flashcards, Quiz, and Infographic from selected project documents (text, Word, PDF, PowerPoint, Excel, old Office formats and more) and the current chat, totalling at most 200,000 characters. Generation uses OpenCode's base model configuration; export creates a new file and refuses to overwrite existing files. History is under `.studio/`.
 
-Source and full specification: [GitHub repository](https://github.com/TheMintageOfMan/surfsense-studio-for-openchamber). Platform qualification, including PDF font loading on Linux, and the Podcast and Picture formats remain pending.
+Source and full specification: [GitHub repository](https://github.com/MintageOfMan/ideas-studio-for-openchamber). Platform qualification, including PDF font loading on Linux, and the Podcast and Picture formats remain pending.
 
 Licensed under the Apache License 2.0; see LICENSE and NOTICE in this folder. Bundled packages and the Inter font keep their own licenses (THIRD-PARTY-LICENSES.txt).

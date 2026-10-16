@@ -10,7 +10,7 @@ import { webpage } from './webpage.mjs';
 
 const planned = (key, label, reason) => Object.freeze({ key, label, implemented: false, reason });
 
-// Grid order follows SurfSense's Studio panel.
+// Keep the established creation-grid order consistent across the panel and service.
 export const FORMATS = Object.freeze([
   summary,
   docx,

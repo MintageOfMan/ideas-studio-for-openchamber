@@ -1,6 +1,6 @@
 // Word, Slides, Spreadsheet and PDF: structured prompts and reply validation shared by the
-// panel and the service. These are this project's own prompts; SurfSense's Office prompts ask
-// the model for Python scripts, which this build never runs. Files are built by the service
+// panel and the service. These are this project's own prompts: they request structured
+// data, never executable scripts. Files are built by the service
 // (shared/service/builders/) from the validated artifact only.
 import { asList, asText, parseJsonObject, plural, structuredPrompt, StudioError } from './core.mjs';
 
