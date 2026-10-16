@@ -8,6 +8,21 @@
   "engines": {
     "node": ">=22"
   },
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": { "openchamber": ">=2.1.1" },
+    "contributes": {
+      "panel": {
+        "id": "ideas-studio-v2",
+        "name": "Ideas Studio",
+        "icon": "windows-11-x64/panel/icon.svg",
+        "entry": "windows-11-x64/panel/index.html"
+      },
+      "page": true,
+      "capabilities": ["files"],
+      "service": { "entry": "service.mjs", "runtime": "host" }
+    }
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "test": "node --test",

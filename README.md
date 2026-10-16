@@ -60,7 +60,15 @@ Each tile's **Options** button also has an optional "What should it focus on?" b
 
 ## Install
 
-Studio is installed as a folder. Users do not install Node, Python, Office or any server.
+Users do not install Node, Python, Office or any server. In OpenChamber **Settings > Extensions**, paste this Git URL and choose **Add**:
+
+```text
+https://github.com/MintageOfMan/ideas-studio-for-openchamber
+```
+
+The repository root contains the extension manifest and selects the matching prebuilt service for Windows x64 or Linux x64. The panel is shared across platforms; Linux remains build-only, not runtime-qualified.
+
+Folder installation is also supported:
 
 1. Download or clone this repository.
 2. In OpenChamber, open **Settings > Extensions** and choose **Add folder**.
@@ -69,7 +77,7 @@ Studio is installed as a folder. Users do not install Node, Python, Office or an
    - [`linux-fedora-amd64/`](linux-fedora-amd64/README.md) (built, not yet tested on Linux)
 4. Approve project-file access and the local service when asked.
 
-Keep the folder where it is: OpenChamber runs the extension from that location. Do not add the repository root as an extension.
+Keep a folder installation where it is: OpenChamber runs it from that location. You can select either the repository root (automatic platform selection) or the matching platform folder.
 
 **Breaking identity change:** the extension name is **Ideas Studio** and its ID is `ideas-studio-v2`. Add it as a new extension and disable the earlier installation if present. Saved host-side extension preferences do not automatically migrate. Existing per-project `.studio/` history is unchanged and remains available when you open the same project.
 

@@ -1,6 +1,15 @@
 # Handoff
 
-## Current work
+## Current fixes
+
+Local branch `fix-license-collector-install`, based on merged `main` at `f6a93d15cf0fa48e4d1314a639b8b08a4a942afc`.
+
+- Fixed the license collector to resolve nested package instances, include license/NOTICE files, and preserve notices from embedded dependency copies. The independent audit reports no missing license text across 102 package instances; all seven embedded copies are listed.
+- Added an installable root extension manifest and a small `service.mjs` launcher that selects the existing Windows/Linux x64 backend. Git-URL and repository-root folder installs no longer point at a development-only manifest. Platform-folder installation remains supported.
+- Both builds and two focused packaging tests pass. The root launcher passed a local authenticated health check and refused unauthenticated requests. No live OpenChamber installation or model calls were performed.
+- The two icon-provenance questions from the earlier audit are outside this collector/install fix.
+
+## Earlier cleanup
 
 Based on latest `main` at `b5821f43b14d8488e623ace390642ff837ac29d1`, on local branch `privacy-ideas-studio-branding`.
 
@@ -21,4 +30,4 @@ Based on latest `main` at `b5821f43b14d8488e623ace390642ff837ac29d1`, on local b
 
 ## Delivery boundary
 
-Implementation is complete on `privacy-ideas-studio-branding`; publication uses that branch rather than changing `main` directly. No pull request, merge, history rewrite, or installed-extension update is included in this task. Review the commit diff before publication. One-off cleanup work is under ignored `temp/`, not part of the distribution.
+The earlier privacy/branding cleanup was merged in PR #8. The collector/install fixes are on `fix-license-collector-install` for publication and PR review, not a direct update to `main`. GitHub-URL installation needs these changes merged first; the local repository root can be used for a folder-install trial now. One-off cleanup and audit work is under ignored `temp/`, not part of the distribution. No installed-extension update or merge is included in this follow-up.
