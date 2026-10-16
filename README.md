@@ -224,6 +224,6 @@ Product names are trademarks of their owners. This project is independent and is
 
 ## License
 
-Copyright 2026 TheMintageOfMan.
+Copyright 2026 - MintageOfMan.
 
 Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for attributions. Bundled third-party packages keep their own licenses, listed in each platform folder's `THIRD-PARTY-LICENSES.txt`. The Inter font stays under the [SIL Open Font License 1.1](shared/fonts/Inter-LICENSE.txt).
