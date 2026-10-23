@@ -3,7 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { LIMITS, modelKey, requireJobId, StudioError } from '../common/core.mjs';
 import { validateRequest } from '../common/formats.mjs';
 import { measureChat } from './chat.mjs';
-import { listSources } from './sources.mjs';
+import { inspectSource, listSources } from './sources.mjs';
 import { StudioJobs } from './jobs.mjs';
 import { projectDirectory } from './storage.mjs';
 
@@ -42,11 +42,16 @@ export function createStudioServer({ token, gateway, jobs = new StudioJobs() }) 
     try {
       const url = new URL(request.url, 'http://127.0.0.1');
       if (request.method === 'GET' && url.pathname === '/health') {
-        json(response, 200, { ok: true, version: '0.2.0', runtime: process.version, platform: process.platform, arch: process.arch });
+        json(response, 200, { ok: true, version: '0.2.3', runtime: process.version, platform: process.platform, arch: process.arch });
         return;
       }
       const body = request.method === 'POST' ? await readBody(request) : null;
-      const context = body?.context ?? Object.fromEntries(url.searchParams);
+      let context = body?.context ?? Object.fromEntries(url.searchParams);
+      if (request.method === 'GET' && url.pathname === '/context') {
+        json(response, 200, await gateway.resolveContext(context));
+        return;
+      }
+      if (!context.directory) context = await gateway.resolveContext(context);
       const directory = await projectDirectory(context.directory);
       context.directory = directory;
       if (request.method === 'GET' && url.pathname === '/connection') {
@@ -54,12 +59,22 @@ export function createStudioServer({ token, gateway, jobs = new StudioJobs() }) 
         return;
       }
       if (request.method === 'GET' && url.pathname === '/sources') {
-        // The chat is offered only when the active session can be read; any problem just hides it.
-        const [files, chat] = await Promise.all([
-          listSources(directory),
-          gateway.prepare(context).then(measureChat).catch(() => ({ available: false })),
-        ]);
-        json(response, 200, { files, chat });
+        json(response, 200, await listSources(directory, {
+          folder: url.searchParams.get('folder') ?? '', offset: Number(url.searchParams.get('offset') ?? 0),
+          sort: url.searchParams.get('sort') ?? 'name', direction: url.searchParams.get('direction') ?? 'asc',
+        }));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/source') {
+        // Parsing is an explicit selection operation, never a side effect of opening a folder.
+        json(response, 200, await inspectSource(directory, url.searchParams.get('path')));
+        return;
+      }
+      if (request.method === 'GET' && url.pathname === '/chat') {
+        const chat = context.sessionId
+          ? await gateway.prepare(context).then(measureChat).catch(() => ({ available: false, reason: 'This chat is not available yet.' }))
+          : { available: false, reason: 'No chat has been started yet.' };
+        json(response, 200, chat);
         return;
       }
       if (request.method === 'GET' && url.pathname === '/jobs') {
@@ -71,6 +86,9 @@ export function createStudioServer({ token, gateway, jobs = new StudioJobs() }) 
       if (request.method === 'POST' && url.pathname === '/jobs') {
         const input = validateRequest(body);
         const connection = await gateway.prepare(context);
+        if (connection.ready !== true || !connection.agent || !connection.agents?.some(agent => agent.id === connection.agent)) {
+          throw new StudioError('AI_SELECTION_REQUIRED', 'Choose an available AI agent and text model before creating.', 409);
+        }
         if (!connection.models.some((model) => model.key === modelKey(input.model))) {
           throw new StudioError('NO_MODEL', 'This model is no longer available. Refresh the connection and select a model.');
         }

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { AlignmentType, Document, Footer, HeadingLevel, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { FONT_FAMILY } from '../../common/font.mjs';
-import { regularTtf } from '../fonts.mjs';
+import { boldTtf, regularTtf } from '../fonts.mjs';
 import { GENERATOR, normalizeZip, provenance } from './shared.mjs';
 
 const tableOf = ({ columns, rows }) => new Table({
@@ -25,18 +25,25 @@ function obfuscate(font, guid) {
   return out;
 }
 
-function stableFontKey(bytes, font) {
-  const hex = createHash('md5').update(font).digest('hex').toUpperCase();
-  const guid = `{${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}}`;
+function stableFontKeys(bytes, fonts) {
   const entries = unzipSync(bytes);
   const table = strFromU8(entries['word/fontTable.xml']);
-  entries['word/fontTable.xml'] = strToU8(table.replace(/w:fontKey="\{[0-9A-Fa-f-]+\}"/g, `w:fontKey="${guid}"`));
-  entries['word/fonts/font1.odttf'] = obfuscate(font, guid);
+  const faces = fonts.map((font, index) => {
+    const hex = createHash('md5').update(font).digest('hex').toUpperCase();
+    const guid = `{${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}}`;
+    entries[`word/fonts/font${index + 1}.odttf`] = obfuscate(font, guid);
+    return `<w:${index === 0 ? 'embedRegular' : 'embedBold'} r:id="rId${index + 1}" w:fontKey="${guid}"/>`;
+  }).join('');
+  // docx exposes regular faces only. Its two generated relationships/files are retained, but
+  // Word needs both faces under one family, with the second marked embedBold rather than a
+  // duplicate regular family. Omit the library's generic (non-Iosevka) Unicode signature.
+  const family = `<w:font w:name="${FONT_FAMILY}"><w:family w:val="modern"/><w:pitch w:val="fixed"/>${faces}</w:font>`;
+  entries['word/fontTable.xml'] = strToU8(table.replace(/<w:font\b[^>]*>[\s\S]*?<\/w:font>/g, '').replace('</w:fonts>', `${family}</w:fonts>`));
   return zipSync(entries);
 }
 
 export async function buildDocx(artifact, meta) {
-  const font = await regularTtf();
+  const fonts = await Promise.all([regularTtf(), boldTtf()]);
   const children = [new Paragraph({ text: artifact.title, heading: HeadingLevel.TITLE })];
   if (artifact.subtitle) children.push(new Paragraph({ children: [new TextRun({ text: artifact.subtitle, italics: true, size: 28 })] }));
   for (const section of artifact.sections) {
@@ -54,8 +61,9 @@ export async function buildDocx(artifact, meta) {
   const run = { font: FONT_FAMILY };
   const document = new Document({
     creator: GENERATOR, lastModifiedBy: GENERATOR, title: artifact.title, description: `Made from ${meta.source}.`,
-    // Embedded so Word shows Inter even where it is not installed. Bold is drawn from the regular face.
-    fonts: [{ name: FONT_FAMILY, data: font }],
+    // Both original faces are embedded, so compatible Word viewers can use true Iosevka bold.
+    fonts: fonts.map((data) => ({ name: FONT_FAMILY, data })),
+    theme: { fonts: { headings: FONT_FAMILY, body: FONT_FAMILY } },
     styles: {
       default: {
         document: { run: { ...run, size: 22 } },
@@ -67,6 +75,6 @@ export async function buildDocx(artifact, meta) {
       children,
     }],
   });
-  const packed = stableFontKey(await Packer.toBuffer(document), font);
+  const packed = stableFontKeys(await Packer.toBuffer(document), fonts);
   return { bytes: normalizeZip(packed, meta.createdAt), notes: [], pages: null };
 }

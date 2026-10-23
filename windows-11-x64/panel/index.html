@@ -20,11 +20,30 @@
         <h2 id="sources-heading">Sources</h2>
         <span id="source-count" class="muted"></span>
       </div>
-      <label id="select-all-row" class="check-row select-all" hidden>
-        <input id="select-all" type="checkbox">
-        <span>Select all</span>
-      </label>
-      <ul id="source-list" class="source-list"></ul>
+      <p class="source-home"><span class="muted">Home</span> <span id="source-home-path">Finding the session folder...</span></p>
+      <ul id="chat-source" class="chat-source"></ul>
+      <div class="source-toolbar">
+        <button id="source-home" class="text-button" type="button" title="Go to the session home folder">Home</button>
+        <button id="source-up" class="icon-button" type="button" aria-label="Up one folder" title="Up one folder" disabled></button>
+        <label class="source-sort"><span>Sort</span>
+          <select id="source-sort" aria-label="Sort files by">
+            <option value="name">Name</option>
+            <option value="size">Size</option>
+            <option value="createdAt">Date created</option>
+            <option value="modifiedAt">Date modified</option>
+          </select>
+        </label>
+        <button id="source-direction" class="icon-button" type="button" aria-label="Sort ascending; switch to descending" title="Sort ascending; switch to descending"></button>
+        <button id="source-refresh" class="icon-button" type="button" aria-label="Refresh sources" title="Refresh sources"></button>
+      </div>
+      <nav id="source-breadcrumbs" class="source-breadcrumbs" aria-label="Source folder"></nav>
+      <p id="source-location" class="source-location" hidden></p>
+      <ul id="source-list" class="source-list" aria-label="Files and folders"></ul>
+      <button id="source-more" class="text-button" type="button" hidden>Show more files and folders</button>
+      <details id="selected-files" class="selected-files" hidden>
+        <summary id="selected-files-title"></summary>
+        <ul id="selected-file-list"></ul>
+      </details>
       <p id="source-hint" class="hint" role="status"></p>
     </section>
 
@@ -61,9 +80,10 @@
         <legend id="choice-label"></legend>
         <div id="choice-options" class="chips"></div>
       </fieldset>
+      <p id="choice-hint" class="muted small">Numbers are targets; the result depends on the selected sources.</p>
       <label class="field">
-        <span>What should it focus on? <span class="muted">(optional)</span></span>
-        <textarea id="focus" rows="3" maxlength="2000" placeholder="For example: the part about the water cycle"></textarea>
+        <span>Focus or custom instructions <span class="muted">(optional)</span></span>
+        <textarea id="focus" rows="3" maxlength="2000" placeholder="For example: focus on the water cycle and write for a first-time reader"></textarea>
       </label>
       <div class="sheet-actions">
         <button class="text-button" data-close="cancel" type="button">Cancel</button>
@@ -75,14 +95,28 @@
   <dialog id="settings" class="sheet" aria-labelledby="settings-title">
     <div class="sheet-body">
       <h2 id="settings-title">Settings</h2>
+      <p id="selection-help" class="muted small" role="status"></p>
+      <label class="field">
+        <span>AI agent</span>
+        <select id="agent-select"></select>
+      </label>
       <label class="field">
         <span>AI model</span>
         <select id="model-select"></select>
-        <span class="muted small">Automatic picks a model that works well with Studio.</span>
+        <span class="muted small">Use the session or project/app defaults, or choose an available model for Studio.</span>
       </label>
-      <p id="connection-line" class="muted small"></p>
+      <label class="check-row">
+        <input id="second-pass" type="checkbox" checked>
+        <span class="source-body">
+          <span>Second pass</span>
+          <span class="muted small">Review and revise before delivery. Uses additional AI calls.</span>
+        </span>
+      </label>
+      <p id="agent-line" class="muted small"></p>
       <div class="sheet-actions">
-        <button class="pill-button primary" data-close="close" type="button">Done</button>
+        <button id="settings-refresh" class="text-button" type="button">Refresh list</button>
+        <button class="text-button" data-close="cancel" type="button">Cancel</button>
+        <button id="settings-apply" class="pill-button primary" type="button" disabled>Use selection</button>
       </div>
     </div>
   </dialog>

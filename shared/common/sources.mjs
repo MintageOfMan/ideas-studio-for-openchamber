@@ -23,7 +23,15 @@ export function sourceKind(path) {
 // The current chat is offered as a source under this reserved name; it is not a file.
 export const CHAT_SOURCE = 'chat:current';
 // Larger chats are sent as compressed context instead (shared/service/chat.mjs).
-export const CHAT_LIMIT = 10_000;
+export const CHAT_WORD_LIMIT = 25_000;
+// Leave 50,000 characters of the combined source budget for selected files.
+export const CHAT_SUMMARY_CHARACTER_LIMIT = 150_000;
+
+// Count whitespace-separated tokens identically in the panel and service. Punctuation
+// and unbroken strings stay within one token; no locale-specific word segmentation.
+export function countWords(text) {
+  return String(text ?? '').match(/\S+/gu)?.length ?? 0;
+}
 
 // How a source is named to people and to the model: the file name without folders or extension
 // ("notes/Water cycle.docx" -> "Water cycle"); the chat is "this chat".

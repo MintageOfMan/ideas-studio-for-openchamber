@@ -1,6 +1,6 @@
 {
   "name": "ideas-studio-for-openchamber",
-  "version": "0.2.0",
+  "version": "0.2.3",
   "private": true,
   "type": "module",
   "description": "Ideas Studio for OpenChamber v2 - study materials and documents development build",

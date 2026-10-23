@@ -1,6 +1,6 @@
 import { LIMITS, requireJobId, sourcesOf, StudioError, validSourcePath } from './core.mjs';
-import { CHAT_LIMIT, CHAT_SOURCE } from './sources.mjs';
-import { docx, pdf, pptx, xlsx } from './documents.mjs';
+import { CHAT_SOURCE, CHAT_WORD_LIMIT, countWords } from './sources.mjs';
+import { DOCUMENT_CAPS, docx, pdf, pptx, xlsx } from './documents.mjs';
 import { flashcards } from './flashcards.mjs';
 import { infographic } from './infographic.mjs';
 import { mindmap } from './mindmap.mjs';
@@ -22,7 +22,6 @@ export const FORMATS = Object.freeze([
   flashcards,
   quiz,
   planned('podcast', 'Podcast', 'Not built yet: needs the optional Kokoro audio pack.'),
-  planned('image', 'Image', 'Not built yet: needs an image-generation model.'),
   infographic,
 ]);
 
@@ -36,42 +35,44 @@ export function formatFor(key) {
 
 export const labelFor = (key) => FORMATS.find((entry) => entry.key === key)?.label ?? String(key);
 
-// One simple choice per format, shown behind the tile's pencil. The first option marked
-// `default` is used when the tile is tapped. `hint` is what the model is told.
+// One simple choice per format in Options. Keep option and default IDs stable for saved
+// history. The option marked `default` is preselected; `hint` is what the model is told.
 const choice = (label, options) => Object.freeze({ label, options: Object.freeze(options) });
-const LENGTH = choice('Length', [
-  { id: 'short', label: 'Shorter', hint: 'Keep it short: roughly half the usual length.' },
-  { id: 'standard', label: 'Standard', hint: '', default: true },
-  { id: 'long', label: 'Longer', hint: 'Go into more detail: use more of the allowed length.' },
-]);
+const sections = (maximum) => choice('Length', [
+  { id: 'short', count: 3 }, { id: 'standard', count: 6, default: true }, { id: 'long', count: maximum },
+].map(({ count, ...option }) => ({
+  ...option, label: `Up to ${count} sections`,
+  hint: `Length: up to ${count} sections. Use fewer if the source supports fewer; do not pad the document.`,
+})));
+const LENGTH = sections(DOCUMENT_CAPS.sections);
 export const CHOICES = Object.freeze({
   summary: choice('Length', [
-    { id: 'short', label: 'Short', hint: 'Length: about 200 words.' },
-    { id: 'standard', label: 'Standard', hint: '', default: true },
-    { id: 'long', label: 'Long', hint: 'Length: about 900 words.' },
+    { id: 'short', label: 'About 200 words', hint: 'Length: about 200 words. Use fewer if the source supports less; do not pad the summary.' },
+    { id: 'standard', label: 'About 500 words', hint: 'Length: about 500 words. Use fewer if the source supports less; do not pad the summary.', default: true },
+    { id: 'long', label: 'About 900 words', hint: 'Length: about 900 words. Use fewer if the source supports less; do not pad the summary.' },
   ]),
-  docx: LENGTH, pdf: LENGTH, webpage: LENGTH,
+  docx: LENGTH, pdf: LENGTH, webpage: sections(10),
   pptx: choice('Length', [
-    { id: 'short', label: 'Short deck', hint: 'Length: about 6 slides.' },
-    { id: 'standard', label: 'Standard', hint: '', default: true },
+    { id: 'short', label: 'Up to 6 slides total', hint: 'Length: up to 6 slides in total, including the 1 title slide added for you. Write at most 5 content slides; do not write the title slide. Use fewer if the source supports fewer.' },
+    { id: 'standard', label: 'Up to 16 slides total', hint: 'Length: up to 16 slides in total, including the 1 title slide added for you. Write at most 15 content slides; do not write the title slide. Use fewer if the source supports fewer.', default: true },
   ]),
   flashcards: choice('Number of cards', [
-    { id: 'fewer', label: 'Fewer', hint: 'Amount: about 8 cards.' },
-    { id: 'standard', label: 'Standard', hint: '', default: true },
-    { id: 'more', label: 'More', hint: 'Amount: as many good cards as the limit allows.' },
+    { id: 'fewer', label: 'Up to 8 cards', hint: 'Amount: up to 8 cards. Use fewer if the source supports fewer distinct questions; do not pad the deck.' },
+    { id: 'standard', label: 'Up to 12 cards', hint: 'Amount: up to 12 cards. Use fewer if the source supports fewer distinct questions; do not pad the deck.', default: true },
+    { id: 'more', label: 'Up to 20 cards', hint: 'Amount: up to 20 cards. Use fewer if the source supports fewer distinct questions; do not pad the deck.' },
   ]),
   quiz: choice('Difficulty', [
-    { id: 'easy', label: 'Easy', hint: 'Difficulty: easy. Test the main facts with clearly different options.' },
-    { id: 'medium', label: 'Medium', hint: '', default: true },
-    { id: 'hard', label: 'Hard', hint: 'Difficulty: hard. Test fine distinctions and links between parts of the source.' },
+    { id: 'easy', label: 'Easy (up to 10 questions)', hint: 'Difficulty: easy. Amount: up to 10 questions, fewer if the source supports fewer. Test the main facts with clearly different options.' },
+    { id: 'medium', label: 'Medium (up to 10 questions)', hint: 'Difficulty: medium. Amount: up to 10 questions, fewer if the source supports fewer. Test the main facts and links between them.', default: true },
+    { id: 'hard', label: 'Hard (up to 10 questions)', hint: 'Difficulty: hard. Amount: up to 10 questions, fewer if the source supports fewer. Test fine distinctions and links between parts of the source.' },
   ]),
   infographic: choice('Detail', [
-    { id: 'simple', label: 'Simple', hint: 'Detail: simple. Use the fewest items that tell the story, and keep descriptions very short.' },
-    { id: 'detailed', label: 'Detailed', hint: '', default: true },
+    { id: 'simple', label: 'Up to 4 items / 2 per group', hint: 'Detail: up to 4 list items, chart values or tree boxes (including the root). For comparison or SWOT layouts, use up to 2 items per group and keep the required number of groups. Stay within the chosen layout\'s minimum and maximum counts. Use only source-supported facts and keep descriptions very short.' },
+    { id: 'detailed', label: 'Up to 8 items / 5 per group', hint: 'Detail: up to 8 list items, chart values or tree boxes (including the root). For comparison or SWOT layouts, use up to 5 items per group and keep the required number of groups. Stay within the chosen layout\'s minimum and maximum counts. Use fewer where the source supports fewer; do not invent facts to fill a layout.', default: true },
   ]),
   mindmap: choice('Detail', [
-    { id: 'simple', label: 'Simple', hint: 'Detail: simple. Fewer branches, two levels deep.' },
-    { id: 'standard', label: 'Detailed', hint: '', default: true },
+    { id: 'simple', label: 'Up to 4 branches, 2 levels', hint: 'Detail: up to 4 main branches and up to 2 levels below the title. Use fewer branches or levels if the source supports fewer.' },
+    { id: 'standard', label: 'Up to 10 branches, 3 levels', hint: 'Detail: up to 10 main branches and up to 3 levels below the title. Use fewer branches or levels if the source supports fewer.', default: true },
   ]),
 });
 
@@ -101,13 +102,15 @@ export function validateRequest(input) {
   const options = CHOICES[format.key]?.options ?? [];
   const picked = input.choice ?? defaultChoice(format.key);
   if (picked !== null && !options.some((option) => option.id === picked)) throw new StudioError('BAD_CHOICE', 'Choose one of the offered options.');
+  const secondPass = input.secondPass === undefined ? true : input.secondPass;
+  if (typeof secondPass !== 'boolean') throw new StudioError('BAD_SECOND_PASS', 'Second pass must be on or off.');
   if (!input.model || !['providerID', 'id'].every((key) => typeof input.model[key] === 'string' && input.model[key].length > 0 && input.model[key].length <= 200)
       || (input.model.variant !== undefined && (typeof input.model.variant !== 'string' || input.model.variant.length > 200))) {
     throw new StudioError('NO_MODEL', 'Select an available generation model.');
   }
   if (JSON.stringify(input).length > LIMITS.request) throw new StudioError('REQUEST_TOO_LARGE', 'The encoded request exceeds the host bridge limit. Nothing was truncated.');
   return {
-    id: input.id, format: format.key, sources, chat, instructions, choice: picked,
+    id: input.id, format: format.key, sources, chat, instructions, choice: picked, secondPass,
     model: { providerID: input.model.providerID, id: input.model.id, ...(input.model.variant ? { variant: input.model.variant } : {}) },
   };
 }
@@ -124,7 +127,7 @@ export function validateJob(input) {
     const content = source.content;
     if (typeof content !== 'string' || !content.trim()) throw new StudioError('EMPTY_SOURCE', `${source.path === CHAT_SOURCE ? 'This chat' : source.path} is empty.`);
     if (content.includes('\0')) throw new StudioError('BAD_SOURCE', `${source.path} is not a plain text file.`);
-    if (source.path === CHAT_SOURCE && content.length > CHAT_LIMIT) throw new StudioError('CHAT_TOO_LARGE', 'The chat summary is longer than allowed.');
+    if (source.path === CHAT_SOURCE && countWords(content) > CHAT_WORD_LIMIT) throw new StudioError('CHAT_TOO_LARGE', 'The chat exceeds the 25,000-word limit.');
     return { path: source.path, content };
   });
   if (!sources.length) throw new StudioError('BAD_SOURCE', 'Choose at least one source.');

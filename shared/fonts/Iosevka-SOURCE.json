@@ -1,0 +1,64 @@
+{
+  "family": "Iosevka",
+  "version": "34.9.0",
+  "width": "Normal",
+  "style": "Upright",
+  "website": "https://typeof.net/Iosevka/",
+  "repository": "https://github.com/be5invis/Iosevka",
+  "release": "https://github.com/be5invis/Iosevka/releases/tag/v34.9.0",
+  "license": {
+    "spdx": "OFL-1.1",
+    "file": "Iosevka-LICENSE.txt",
+    "source": "https://raw.githubusercontent.com/be5invis/Iosevka/v34.9.0/LICENSE.md",
+    "sha256Lf": "4ba53c7c1cb39279aae5f8d7d22054c485c71169920e5a36ed098b115e2e3c5d",
+    "md5Lf": "6bfd77c715a7794796b4a2bbb784d673"
+  },
+  "archives": [
+    {
+      "name": "PkgTTF-Iosevka-34.9.0.zip",
+      "url": "https://github.com/be5invis/Iosevka/releases/download/v34.9.0/PkgTTF-Iosevka-34.9.0.zip",
+      "bytes": 176769598,
+      "sha256": "c61a10b880bf3087f982217423fa2876a93803bd2a1901fbc52ab80c7329f716"
+    },
+    {
+      "name": "PkgWebFont-Iosevka-34.9.0.zip",
+      "url": "https://github.com/be5invis/Iosevka/releases/download/v34.9.0/PkgWebFont-Iosevka-34.9.0.zip",
+      "bytes": 271053773,
+      "sha256": "7a34422774336d5851102f2c80e8c282d1bdae3b944cc6d083ead2b20b3af69d"
+    }
+  ],
+  "files": [
+    {
+      "name": "Iosevka-Regular.ttf",
+      "archive": "PkgTTF-Iosevka-34.9.0.zip",
+      "entry": "Iosevka-Regular.ttf",
+      "bytes": 11601540,
+      "md5": "42b7a0d6ef63cd38d3e83090568d4b16",
+      "sha256": "c7e1ddc73aa7efd9353f86be61df834784d1a9d17d6f8eeac5ad2bca9b3ef53a"
+    },
+    {
+      "name": "Iosevka-Bold.ttf",
+      "archive": "PkgTTF-Iosevka-34.9.0.zip",
+      "entry": "Iosevka-Bold.ttf",
+      "bytes": 11658248,
+      "md5": "4a0fc266ca29c6c2842ac0eed9ec34e6",
+      "sha256": "4bfa53c2622f442dfa51bf1e6f9f11665626edff48272dd52df82ff1ea28dd26"
+    },
+    {
+      "name": "Iosevka-Regular.woff2",
+      "archive": "PkgWebFont-Iosevka-34.9.0.zip",
+      "entry": "WOFF2/Iosevka-Regular.woff2",
+      "bytes": 1705984,
+      "md5": "377fe40e6355a44745a564a8675d7bab",
+      "sha256": "139d7477bd76ed89d496045e2e7f888bac9c0106aa2ad199b70c5cc869efc2b2"
+    },
+    {
+      "name": "Iosevka-Bold.woff2",
+      "archive": "PkgWebFont-Iosevka-34.9.0.zip",
+      "entry": "WOFF2/Iosevka-Bold.woff2",
+      "bytes": 1723604,
+      "md5": "0ac41bf8e148e532dc1b5070341d350e",
+      "sha256": "30428adf25f11ad2a793f6a99d7194cffec8c41d8292672885b6a70e6369b461"
+    }
+  ]
+}

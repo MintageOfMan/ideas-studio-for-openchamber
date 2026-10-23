@@ -2,11 +2,11 @@
 ## Extension for OpenChamber v2
 Inspired by [Google NotebookLM](https://notebooklm.google.com/) and [SurfSense](https://github.com/MODSetter/SurfSense).
 
-Turn your notes into study material and documents with one tap. Ideas Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
+Turn your notes into study material and documents. Ideas Studio is an independent, optional extension for [OpenChamber](https://github.com/openchamber/openchamber). It takes the documents in a project (text, Markdown, Word, PDF, PowerPoint, Excel, including the old 97-2003 formats, CSV, JSON, web pages and more) and, if you like, the current chat, and makes summaries, flashcards, quizzes, mind maps, web pages, Word reports, slide decks, spreadsheets, PDFs and infographics from them, using the AI models you already have in OpenChamber.
 
-It is built for everyone. A curious ten-year-old should be able to use it, and so should a history professor who knows nothing about AI, or someone who is not comfortable with computers. Pick your files, tap a tile, open the result, save it. Studio uses plain words without talking down to anyone, chooses sensible defaults, and quietly recovers from most problems. Technical details are there for people who want them, under **About this**.
+It is built for everyone. A curious ten-year-old should be able to use it, and so should a history professor who knows nothing about AI, or someone who is not comfortable with computers. Pick your files, tap a tile, review **Options**, then choose **Create**. Open the result and save it. Studio uses plain words without talking down to anyone, chooses sensible defaults, and quietly recovers from most problems. Technical details are there for people who want them, under **About this**.
 
-> **Status: development build, 10 of 12 formats.** Tested on Windows 11 x64 with OpenChamber 2.1.1 and OpenCode 2.0.22. The Fedora build is produced but has not been run on Linux. Podcast and Picture are planned. See [Project status](#project-status).
+> **Status: development build, 10 of 11 formats.** Tested on Windows 11 x64 with OpenChamber 2.1.1 and OpenCode 2.0.22. The Fedora build is produced but has not been run on Linux. Only Podcast is planned. See [Project status](#project-status).
 
 ## Contents
 
@@ -35,28 +35,29 @@ It is built for everyone. A curious ten-year-old should be able to use it, and s
 | Office 97-2003 | `.doc`, `.xls`, `.ppt` | Studio's own reader for the old binary formats (no extra library): document text, every sheet with dates, slides with notes |
 | This chat | The OpenChamber chat Studio is open beside | See below |
 
-Studio looks in the project folder and up to two folders down, skipping tool folders such as `node_modules` and boilerplate such as license files. A file it cannot use is still listed, greyed out, with the reason: for example a scanned PDF with no text, a password-protected file or a damaged one.
+Studio opens a file browser at the session's home folder, even before the first message. The home path and folder breadcrumbs show exactly where you are. Open folders to browse their immediate contents; hidden folders, tool folders, and unsupported files are not hidden, and there is no fixed browsing depth. Sort by name, size, date created, or date modified, in either direction. An unavailable creation date is shown as unavailable, not replaced with another date.
 
-**This chat.** The current chat (only this one, and only when ticked) can be a source. Studio reads the chat's words, not its tool output. A chat of up to 10,000 characters goes as it is. If OpenCode has already compacted the chat, Studio uses OpenCode's own summary plus the messages after it. A longer chat is shortened first: Studio asks OpenCode to summarize it from the session's context. That uses the chat's model, may be billed, and never changes the chat itself. **About this** says when this happened.
+No files are selected automatically, including files selected the last time Studio was open. Tick a file to read it; opening a folder does not parse its documents. Selections stay checked as you move between folders, and the selected-files list shows their paths. Unsupported files and shortcuts are visible but disabled. If a selected file cannot be read, Studio explains why. Paths cannot escape the session's home through shortcuts or parent-folder traversal.
+
+**This chat.** The current chat is selected automatically when it has readable messages; untick it to exclude it. An explicit untick is preserved while that chat remains open. An empty or not-yet-created chat does not prevent file-based use. Studio reads the chat's words, not its tool output. A chat through **25,000 words** goes as it is; words are counted as whitespace-separated tokens, not model tokens. If OpenCode has already compacted the chat, Studio uses its summary plus the messages after it. A longer chat is shortened only when generating: Studio asks OpenCode for a summary of at most 20,000 words, rejecting anything above 25,000 words or its 150,000-character ceiling (never longer than the original). The existing 200,000-character combined source budget still applies. Summarization uses the chat's model, may be billed, and never changes the chat itself. **About this** records the original word count when compression happened.
 
 ## What it makes
 
 | Tile | Result | Options | Limits |
 |---|---|---|---|
-| Summary | Structured Markdown brief | Short, Standard, Long | About 500 words by default |
-| Report (Word) | Editable `.docx` with headings, paragraphs, bullets and tables | Shorter, Standard, Longer | 12 sections; tables up to 8 columns x 50 rows |
-| Slides | Editable 16:9 `.pptx` with a title slide and speaker notes | Short deck, Standard | 15 slides, 6 bullets each |
-| Data table (Excel) | `.xlsx` of tables found in the source, missing values left empty, plus a Notes sheet | Focus only | 10 sheets, 20 columns, 500 rows |
-| Web page | Self-contained `.html` page with no scripts | Shorter, Standard, Longer | 10 sections |
-| PDF | Typeset `.pdf` ready to print | Shorter, Standard, Longer | 12 sections |
-| Mind map | Zoomable, collapsible map plus a text outline | Simple, Detailed | 10 branches, 6 levels |
-| Flashcards | One card at a time with reveal and "mark known"; progress is saved | Fewer, Standard, More | 20 cards |
-| Quiz | Four-option questions with scoring and explanations; progress is saved | Easy, Medium, Hard | 10 questions |
-| Infographic | One-page poster in one of 16 layouts (steps, timeline, roadmap, cycle, pyramid, funnel, cards, list, compare, SWOT, pie, columns, bars, tree); saved as PNG and SVG | Simple, Detailed | 8 items; long text is shortened and the cut is marked |
+| Summary | Structured Markdown brief | About 200, **500** or 900 words | Word counts are approximate |
+| Report (Word) | Editable `.docx` with headings, paragraphs, bullets and tables | Up to 3, **6** or 12 sections | 12 sections; tables up to 8 columns x 50 rows |
+| Slides | Editable 16:9 `.pptx` with a title slide and speaker notes | Up to 6 or **16** slides total, including the title slide | 15 content slides plus 1 title slide; 6 bullets per content slide |
+| Spreadsheet (Excel) | `.xlsx` of tables found in the source, missing values left empty, plus a Notes sheet | Optional focus; source-data limits shown | 10 data sheets plus Notes; 20 columns and 500 rows per data sheet |
+| Web page | Self-contained `.html` page with no scripts | Up to 3, **6** or 10 sections | 10 sections |
+| PDF | Typeset `.pdf` ready to print | Up to 3, **6** or 12 sections | 12 sections |
+| Mind map | Zoomable, collapsible map plus a text outline | Up to 4 main branches / 2 levels, or **10 main branches / 3 levels** below the title | 10 main branches, 6 levels below the title |
+| Flashcards | One card at a time with reveal and "mark known"; progress is saved | Up to 8, **12** or 20 cards | 20 cards |
+| Quiz | Four-option questions with scoring and explanations; progress is saved | Easy (up to 10 questions), **Medium (up to 10 questions)**, Hard (up to 10 questions) | 10 questions |
+| Infographic | One-page poster in one of 16 layouts (steps, timeline, roadmap, cycle, pyramid, funnel, cards, list, compare, SWOT, pie, columns, bars, tree); saved as PNG and SVG | Up to 4 items / 2 per group, or **8 items / 5 per group** | Lists/charts: 8 items; groups: 5 items each; trees: 20 boxes, 3 levels; long text is shortened and the cut is marked |
 | Podcast | Planned: two-speaker audio with an optional Kokoro voice pack | | |
-| Picture | Planned: an illustration from an image model | | |
 
-Each tile's **Options** button also has an optional "What should it focus on?" box. Everything Studio makes uses one font, **Inter**, so the panel, previews and files look alike.
+Each implemented tile opens **Options** first, with defaults already selected (bold above) and an optional "Focus or custom instructions" box. The numbers are generation targets within the format limits, not promises of an exact result; a short source may support fewer items. Infographic counts apply to list items, chart values or tree boxes including the root; comparison and SWOT layouts instead use the displayed count per group. Spreadsheet extracts source tables without an invented row-count target. **Iosevka** is the default font for Studio and supported output formats; see the font and format limitations below.
 
 ## Install
 
@@ -83,14 +84,18 @@ Keep a folder installation where it is: OpenChamber runs it from that location. 
 
 ## Use
 
-1. Open a chat in a project, then open **Ideas Studio** from the right-hand rail.
-2. Under **Sources**, tick the files to use, and **This chat** if you want the conversation included. Studio ticks a sensible set of files for you and remembers your choice. It will not let you tick more text than it can send.
-3. Tap a tile to make something with the default settings. Or tap the tile's **Options** button to choose one simple setting and, if you like, say what to focus on.
+1. Open **Ideas Studio** from the right-hand rail. You do not need to send a message or create a chat first.
+2. Under **Sources**, browse from the session's home folder and tick only the files you want. **This chat** is checked when available; untick it to exclude the conversation. Studio keeps file selections as you browse, but starts with no files selected when reopened or switched to another chat. It will not let you tick more text than it can send.
+3. Tap a tile to open **Options**. Review the preselected numeric setting, change it if you like, and optionally say what to focus on. Choose **Create** to start; opening Options does not generate anything.
 4. Your item appears under **Your creations** with a spinner, then a "ready" message. You can make up to three things at once.
 5. Tap an item to open it. Tap **Save** to put a copy in the project folder, named after its title, such as `Planets quiz.md` or `How a seed grows.png`. Saving never overwrites a file; a second copy becomes `(2)`.
 6. **About this**, under each item, shows the sources, the AI model and any changes Studio made, such as text it shortened or left out. The files themselves only say which sources they were made from and when; they never mention AI models or file paths.
 
-The gear in the top corner chooses the AI model. **Automatic** is the default and the recommended choice.
+The gear in the top corner opens the AI agent and model selector. Studio first tries the saved session or configured project/app/OpenCode defaults. If they do not resolve to an available agent and text model, the selector opens automatically and creation stays disabled. Choose an agent and model, then **Use selection** to validate them. Cancelling the selector does not bypass the gate. **Refresh list** reloads available choices after a configuration change. Selecting an agent/model in Studio does not change the real chat. Studio still uses stateless text generation, not agent tools or a new conversation.
+
+**Second pass** is checked by default in Settings. Studio creates a private draft, asks the AI for a concise review against the selected sources and your instructions, then creates a complete revision using that criticism. You see the normal progress circle and one final creation, not intermediate drafts or review text. Uncheck it and save Settings for single-pass creation. This preference is remembered across projects; changing it does not change an already-running job. It normally uses three AI calls instead of one, with at most two shared recovery calls (five maximum with Second pass, three without). Long-chat summarization is separate. **About this** shows call counts and the quality setting; it does not expose the private draft or criticism. A failed or cancelled review/revision is not presented as a successful first draft.
+
+OpenChamber 2.5.0 exposes a new draft's directory but not its unsent composer model/agent overrides to extensions. Before a saved session exists, Studio therefore uses matching project defaults or the configured OpenChamber/OpenCode defaults. It does not create a session just to discover those values. Models and variants must be available to OpenCode's base-configuration text generation. Studio never treats an arbitrary first model or an invented agent name as a working default. Selection checks read the configured catalogs without billable probe calls; provider outages can still cause a generation request to fail.
 
 ## How it works
 
@@ -99,17 +104,17 @@ Studio has two parts, both shipped in the platform folder and run by OpenChamber
 - **Panel** (`panel/`): the screen you use. It runs in OpenChamber's sandboxed extension frame.
 - **Service** (`service/`): a small JavaScript program that OpenChamber starts with its own runtime. It talks to the AI, checks the replies, builds the files and keeps the history.
 
-When you tap a tile:
+When you choose **Create** in Options:
 
 1. The panel sends the ticked file names, with your choice and focus, to the service. The service reads the files itself, so it can open PDFs and Office files that the sandboxed panel cannot. It also reads the chat if ticked, shortening it through OpenCode when it is long.
 2. The service asks the AI model for a structured reply (JSON for most formats) through OpenChamber's local connection to OpenCode. It never reads or stores credentials.
 3. The service checks the reply strictly. Anything incomplete or over a limit is dropped or shortened, and every change is listed under **About this**. Nothing the model writes is ever run as code.
-4. If the reply is unusable, Studio quietly tries again: the chosen model twice, then the recommended model once. That is at most three AI calls per tap, and every try is recorded.
-5. Trusted builders turn the checked content into the file:
-   - Word: [docx](https://github.com/dolanmiu/docx), with Inter embedded.
+4. With Second pass on, Studio reviews the validated draft and creates a complete revision from the same source snapshot, numeric choice and custom instructions. The review checks content and structure, not a rendered document's appearance. Recovery shares two extra calls across all stages: a chosen-model retry, then a distinct recommended fallback. Every call and stage is recorded.
+5. Trusted builders turn only the final checked content into the file:
+   - Word: [docx](https://github.com/dolanmiu/docx), with Iosevka embedded.
    - Slides: [PptxGenJS](https://github.com/gitbrent/PptxGenJS).
    - Excel: [write-excel-file](https://gitlab.com/catamphetamine/write-excel-file).
-   - PDF: [PDFKit](https://github.com/foliojs/pdfkit), with Inter embedded.
+   - PDF: [PDFKit](https://github.com/foliojs/pdfkit), with Iosevka embedded.
    - Infographic: [AntV Infographic](https://github.com/antvis/Infographic), run in its own background thread.
    - Mind map: [Markmap](https://github.com/markmap/markmap).
    - Web page: a fixed template that escapes every piece of text.
@@ -125,11 +130,11 @@ Infographic PNGs are drawn in the panel, because the library places text in a wa
 
 ## Limits and known issues
 
-- Selected sources can total 200,000 characters of text (about 50,000 words), up to 50 files; the chat counts as at most 10,000. Studio refuses rather than cutting a source short.
+- Selected sources can total 200,000 characters of text, up to 50 files. Full chat text is included through 25,000 words; longer chats reserve up to 150,000 characters for their summary. Both word and combined-character limits apply. Studio refuses rather than cutting a source short.
 - No OCR: a scanned PDF has no text to read. Files over 25 MB, encrypted files and pre-1997 Office formats are not read. In old `.doc` files only the main text is read (not headers, footnotes or comments). PDFs in East Asian scripts may lack text because PDF.js character maps are not bundled.
-- **Automatic** uses a model verified with every format when one is available (GPT-6 Astra Ultrafast on the test machine). Otherwise it uses the chat's model without a reasoning variant. A Claude Opus 5.5 run at variant `max` returned empty text for structured formats through OpenCode's stateless route.
-- PowerPoint and Excel files name the Inter font but cannot carry it, so those apps substitute a font where Inter is not installed. Word, PDF, web pages and infographics carry Inter with them.
-- PDF characters Inter cannot draw, such as emoji, appear as `?` and are listed under **About this**.
+- **Automatic** follows the session/default model. The known-good model is kept only as the existing bounded retry fallback. A Claude Opus 5.5 run at variant `max` returned empty text for structured formats through OpenCode's stateless route.
+- PowerPoint and Excel files name Iosevka but cannot carry it with the existing builders, so those apps substitute a font where Iosevka is not installed. Word, PDF, web pages and infographic SVGs embed it; PNGs contain rendered pixels. Plain Markdown carries no font metadata, but its Studio viewer uses Iosevka.
+- PDF characters the font cannot draw appear as `?` and are listed under **About this**. PDF rendering disables optional `frac` and `calt` substitutions for fontkit compatibility; Unicode glyph coverage and mark positioning are retained.
 - Document previews show the content the file was built from, not a pixel-perfect rendering of the file.
 - Large mind maps are small in the side panel; zoom in or open Studio full screen.
 - Stopping a job cancels Studio's request, but the AI provider may still charge for work already started.
@@ -149,7 +154,7 @@ npm run build   # rebuilds windows-11-x64/ and linux-fedora-amd64/
 | `shared/common/` | Format definitions, prompts and reply checks, shared by panel and service |
 | `shared/panel/` | Panel screen, viewers and styles |
 | `shared/service/` | Service: HTTP bridge, jobs, storage, OpenCode adapter, file builders |
-| `shared/fonts/` | Inter font files, license and text-measurement data |
+| `shared/fonts/` | Iosevka font files, upstream provenance/license and text-measurement data |
 | `shared/licenses/` | License notices for bundled packages that ship none |
 | `scripts/` | Build, read-only connection probe, font-metrics generator |
 | `tests/` | Controlled tests for every format, recovery, storage and the service |
@@ -165,7 +170,7 @@ npm run build   # rebuilds windows-11-x64/ and linux-fedora-amd64/
 - Infographic PNG and SVG saving.
 
 **Not yet done:**
-- Podcast and Picture.
+- Podcast.
 - Testing on Linux and macOS.
 - Clean-machine install and upgrade tests.
 - Release packaging.
@@ -213,7 +218,7 @@ Studio stands on the work of many people. Thank you all.
 
 **Font**
 
-- [Inter](https://github.com/rsms/inter) by Rasmus Andersson and the Inter Project Authors, under the SIL Open Font License 1.1.
+- [Iosevka](https://typeof.net/Iosevka/) 34.9.0 by Renzhi Li (Belleve Invis), under the SIL Open Font License 1.1. Studio bundles unmodified Normal-width, Upright Regular and Bold TTF/WOFF2 files from the [official release](https://github.com/be5invis/Iosevka/releases/tag/v34.9.0); [source URLs and SHA-256 hashes](shared/fonts/Iosevka-SOURCE.json) are retained with the font.
 
 **Development tools (not shipped)**
 
@@ -226,4 +231,4 @@ Product names are trademarks of their owners. This project is independent and is
 
 Copyright 2026 - MintageOfMan.
 
-Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for attributions. Bundled third-party packages keep their own licenses, listed in each platform folder's `THIRD-PARTY-LICENSES.txt`. The Inter font stays under the [SIL Open Font License 1.1](shared/fonts/Inter-LICENSE.txt).
+Licensed under the [Apache License, Version 2.0](LICENSE). See [NOTICE](NOTICE) for attributions. Bundled third-party packages keep their own licenses, listed in each platform folder's `THIRD-PARTY-LICENSES.txt`. The Iosevka font stays under the [SIL Open Font License 1.1](shared/fonts/Iosevka-LICENSE.txt).

@@ -1,6 +1,56 @@
 # Handoff
 
-## Current fixes
+## Current delivery: 0.2.3
+
+Iosevka 34.9.0 regular/bold is bundled with full glyph coverage, license and source
+provenance. The OpenCode connection-version line is removed. Chat compression now
+starts above 25,000 whitespace-separated words, within the separately documented
+character limits. Second pass defaults on and persists across projects: validated
+private draft, concise source-grounded review, then a complete revision. Only the
+final content/file is published, using the usual job spinner. Off retains one pass.
+The shared recovery budget permits five content calls with it on, three with it off;
+normal counts are three and one. Chat summarization remains separate.
+
+Verification covered 121 controlled cases: the full suite passed 120, and a real
+Word-build case passed its focused rerun after its test-only timeout was increased
+for the larger font payload. All seven current browser checks passed. Both platform
+packages built successfully, 15 files and approximately 35 MiB expanded each.
+No live model call, installed-extension update, system font installation, runtime
+restart or GitHub write was made. Linux remains build-only. Old fonts are retained
+under ignored `temp/previous-fonts_2026-10-23T06-21-03-607Z/`, not deleted.
+
+## Earlier delivery: 0.2.2
+
+The AI agent/model selector is implemented. Creation is disabled until catalog
+validation succeeds; invalid defaults open the selector automatically. Manual
+Studio overrides do not change the actual chat. Both the panel and service enforce
+the gate. Options-first creation, numeric targets and the revised format catalog
+are included in the rebuilt Windows and Linux packages.
+
+Final verification: 87/87 controlled Node tests and 10/10 browser checks of the
+rebuilt Windows panel. Two browser submissions used mock replies, not a live model.
+No installed extension, real session, OpenChamber/OpenCode runtime, or GitHub state
+was changed. Linux remains build-only. Publication/installation is a separate step.
+Availability is validated from configured catalogs; no billable health probes run.
+
+## Current format-options follow-up
+
+- The shared catalog has 11 formats, with 10 implemented and only Podcast planned.
+  The Excel tile and creation messages use **Spreadsheet**.
+- Options open before creation. Length, count and detail choices show numeric targets
+  and send matching hints; their existing IDs and default IDs are retained for history.
+  Slide totals include the added title slide. Infographic counts account for grouped
+  layouts, and Spreadsheet keeps optional focus with source-only data limits.
+- The [README options table](README.md#what-it-makes), specification, roadmap, agent
+  guidance and platform READMEs describe the same format scope and workflow.
+  Root Git-URL and both platform-folder installations, PNG/SVG exports, source
+  attributions and third-party licenses are preserved.
+- Focused controlled verification: `node --test tests/formats.test.mjs tests/panel-context.test.mjs tests/numeric-options.test.mjs`
+  passed 14/14 tests, including saved-choice compatibility, prompt target delivery,
+  actual PowerPoint slide totals and Infographic group counts. Test fixtures stay
+  under ignored `temp/`; these checks do not establish live model quality.
+
+## Earlier collector/install fixes
 
 Local branch `fix-license-collector-install`, based on merged `main` at `f6a93d15cf0fa48e4d1314a639b8b08a4a942afc`.
 

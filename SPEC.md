@@ -4,13 +4,13 @@
 
 **Version:** 0.2  
 **Date:** 2026-10-06  
-**Status:** Draft specification. A Windows development build implements 10 of 12 formats: Summary, Word, Slides, Spreadsheet, Web page, PDF, Mind map, Flashcards, Quiz, and Infographic. See [README.md](README.md) for what has been validated. The media and audio formats and cross-platform runtime validation have not been completed.
+**Status:** Draft specification. A Windows development build implements 10 of 11 formats: Summary, Word, Slides, Spreadsheet, Web page, PDF, Mind map, Flashcards, Quiz, and Infographic. See [README.md](README.md) for what has been validated. Only Podcast remains planned; cross-platform runtime validation has not been completed.
 
 **Changes in 0.2:** Office and PDF files are built by trusted JavaScript builders inside the Studio service; Studio no longer plans a self-packaged Python runtime. The model connection route is settled for local hosts, and password-protected, remote, and relay hosts are out of scope.
 
 ## 1. Purpose
 
-Create an independently developed and distributed, optional OpenChamber extension that turns selected sources into the 12 study, document, and media formats below. Google's NotebookLM/Gemini and SurfSense are inspirations, not application or backend dependencies. Ideas Studio owns its architecture, implementation decisions, and builders; retain the scoped historical source attribution and third-party licenses documented in NOTICE.
+Create an independently developed and distributed, optional OpenChamber extension that turns selected sources into the 11 study, document, and media formats below. Google's NotebookLM/Gemini and SurfSense are inspirations, not application or backend dependencies. Ideas Studio owns its architecture, implementation decisions, and builders; retain the scoped historical source attribution and third-party licenses documented in NOTICE.
 
 The extension should feel native to OpenChamber while owning its generation workflow, interactive viewers, artifact history, and runtime components.
 
@@ -19,10 +19,10 @@ The extension should feel native to OpenChamber while owning its generation work
 1. **Optional extension, not an OpenChamber feature bundled at setup.** Install, version, release, enable, and disable Studio independently. No OpenChamber installer changes, core fork, or mandatory inclusion in OpenChamber.
 2. **Platform-specific distribution.** Produce separate packages for supported OS/CPU combinations, sharing one codebase, extension identity, version scheme, and feature contract.
 3. **Self-contained means no separately installed software prerequisites.** Users must not install Python, Node, Docker, Microsoft Office, LibreOffice, another study application, a separate OpenCode plugin, or a separately managed backend to use Studio.
-4. **Networked models are expected.** Text and image generation can use configured external model endpoints. Self-contained does not mean offline, anonymous, or free of provider credentials and usage charges.
+4. **Networked models are expected.** Text generation can use configured external model endpoints. Self-contained does not mean offline, anonymous, or free of provider credentials and usage charges.
 5. **Dependencies are Studio-owned.** Bundle required components or, where explicitly supported, download complete runtime packs through Studio itself. No user-run package-manager commands or compilation.
 6. **Kokoro is an optional post-install download.** Do not include its runtime/model payload in the base extension. A user chooses when to install the complete audio pack through Studio.
-7. **All 12 formats remain in scope.** A missing model or optional runtime disables only the affected formats, with an actionable explanation.
+7. **All 11 formats remain in scope.** Ten are implemented and only Podcast is planned. A missing model or optional runtime disables only the affected formats, with an actionable explanation.
 8. **No application modification is authorized by this specification.** Implementation, installation, and configuration are separate work.
 9. **No self-packaged Python.** DOCX, PPTX, XLSX, and PDF files are built by trusted JavaScript builders that run in the Studio service on OpenChamber's own runtime.
 10. **Local hosts only.** Studio supports a local OpenChamber desktop host whose proxy accepts the extension's requests as configured. Password-protected, remote, and relay hosts are not supported, and Studio never bypasses authentication to reach them.
@@ -32,10 +32,10 @@ The extension should feel native to OpenChamber while owning its generation work
 
 ### Included
 
-- A right-rail Studio panel with the 12-format grid, source selection, optional generation instructions, job status, artifact history, and previews.
+- A right-rail Studio panel with the 11-format grid, source selection, optional generation instructions, job status, artifact history, and previews.
 - A larger/full-screen extension view for reading or interacting with artifacts.
 - Explicit source selection from supported project files and OpenChamber message/session actions.
-- Text-model and image-model integration, JavaScript document builders, and optional local Kokoro speech generation.
+- Text-model integration, JavaScript document builders, and optional local Kokoro speech generation.
 - Saving/exporting real artifacts, regeneration, cancellation, and persistent flashcard/quiz progress.
 - Independent platform packages and extension-managed runtime lifecycle.
 
@@ -43,7 +43,7 @@ The extension should feel native to OpenChamber while owning its generation work
 
 - A separate study application, notebook database, crawler, connector catalog, embedding system, or retrieval platform.
 - Full Word, PowerPoint, or Excel editing inside OpenChamber. Editable output files and previews are required; an embedded Office suite is not.
-- Bundled text-generation or image-generation model weights, GPU drivers, or a new general-purpose model server.
+- Bundled text-generation model weights, GPU drivers, or a new general-purpose model server.
 - A bundled Python runtime or frozen Python worker.
 - Password-protected, remote, and relay OpenChamber hosts.
 - A separately installed OpenCode plugin or MCP server as a prerequisite. Agent-callable Studio tools can be considered later without blocking the graphical extension.
@@ -64,12 +64,11 @@ Every generation uses the selected sources and model configuration. Outputs must
 | F06 | Document | Editable `.docx` report with structured headings, paragraphs, and supported tables. | Text model and the `docx` 9.9.0 DOCX builder. | Built |
 | F07 | Spreadsheet | Editable `.xlsx` containing tables extracted from sources; missing values remain missing or explicitly identified. | Text model and the `write-excel-file` 4.1.1 XLSX builder. | Built |
 | F08 | Web page | Self-contained `.html` with bundled/inline presentation assets and isolated preview. | Text model and trusted HTML builder. | Built |
-| F09 | PDF | Typeset `.pdf`, with preview and file export. | Text model and the `pdfkit` 0.20.2 PDF builder with bundled Inter 4.1. | Built |
+| F09 | PDF | Typeset `.pdf`, with preview and file export. | Text model and the `pdfkit` 0.20.2 PDF builder with bundled Iosevka 34.9.0. | Built |
 | F10 | Podcast | Two-host spoken conversation, transcript, audio player, and exported audio. WAV is the baseline; MP3/ffmpeg is not required. | Text model and optional downloaded Kokoro audio pack. | Planned |
-| F11 | Image | An illustration based on the selected material, with preview and image-file export. | Text model for the brief/prompt and a configured image model. | Planned |
-| F12 | Infographic | A single-panel visual summary based on a factual brief, with preview and image-file export. | Text model and `@antv/infographic` 0.2.20, drawn in a service worker thread; no image model. | Built |
+| F11 | Infographic | A single-panel visual summary based on a factual brief, with preview and PNG/SVG export. | Text model and `@antv/infographic` 0.2.20, drawn in a service worker thread. | Built |
 
-Office previews may differ from Microsoft Office's rendering. Exported files must nevertheless be structurally valid and editable in compatible applications. Image and infographic outputs are not promised to be editable diagrams or to reproduce text perfectly.
+Office previews may differ from Microsoft Office's rendering. Exported files must nevertheless be structurally valid and editable in compatible applications. Infographic outputs are not promised to be editable diagrams or to reproduce text perfectly.
 
 **Document builder choices (pass 3).** All four libraries are MIT-licensed, pure JavaScript, and make no network calls when given text only. `exceljs` 4.4.0 was rejected: last published in 2024 with deprecated dependencies, and much heavier than `write-excel-file`, whose only dependency is `fflate`. Noto Sans and Open Sans were rejected because they lack glyphs for common symbols such as U+2192; Inter 4.1 (SIL OFL) has 2,852 characters including arrows and math symbols, and replaced DejaVu Sans so that every output uses one font. pdfkit's standard fonts are never loaded (`font: null`), so no metric file is read from disk after bundling. Characters the font cannot draw become "?" and are disclosed in the artifact notes. fontkit's WOFF2 decoder (`brotli`) is replaced at build time by a stub because only TrueType fonts are embedded. Builders rewrite ZIP entry times and `docProps/core.xml` dates from the record's `createdAt`, so rebuilding an artifact gives identical bytes; Word's embedded-font key is derived from the font bytes for the same reason. Previews render the validated artifact, not the file; `pdf.js` or `docx-preview` rendering was not added.
 
@@ -80,7 +79,7 @@ Office previews may differ from Microsoft Office's rendering. Exported files mus
 1. Obtain the package for the OS/architecture of the OpenChamber host running Studio.
 2. Install through Settings > Extensions, using ZIP installation only when the base package meets the host's limits. Otherwise, extract the distribution archive and use Add folder.
 3. Approve the declared capabilities, including the local service where required.
-4. Select/configure text and image model connections as needed. Never require a system-wide runtime installation.
+4. Select/configure a text model connection as needed. Never require a system-wide runtime installation.
 5. Leave Kokoro uninstalled unless podcast generation is wanted.
 
 Folder installs run from their selected location, so that location must remain available. Independent releases do not imply automatic updates: folder-based installations follow OpenChamber's folder-install behavior.
@@ -88,9 +87,9 @@ Folder installs run from their selected location, so that location must remain a
 ### Generation
 
 1. Open Studio, or invoke its action on a message/session.
-2. Select sources and a format; optionally provide focus, length, or format-specific instructions.
+2. Select sources and tap a format to open **Options**. Review the preselected numeric target and optionally provide focus or format-specific instructions. Length, count and detail choices show numbers that agree with the prompt and format limits; they are targets, not exact-output promises. Slide totals include the added title slide. Spreadsheet keeps optional focus and shows its source-data limits without requesting invented rows.
 3. Review the selected model, source scope, and any missing prerequisite.
-4. Start generation explicitly. Do not make billable generation calls merely because the panel opens.
+4. Choose **Create** to start generation explicitly. Opening the panel or Options must not make billable generation calls. Retain choice and default IDs for saved-history compatibility when changing labels or hints.
 5. View job status, then open, export, or regenerate the result. Cancel a running job when needed.
 
 A podcast additionally requires the audio pack and a two-speaker brief/voice selection. If the pack is absent, show Download Kokoro instead of a generation failure.
@@ -101,12 +100,13 @@ A podcast additionally requires the audio pack and a two-speaker brief/voice sel
 - Show queued, running, completed, failed, cancelled, and interrupted states as applicable.
 - Keep work independent of panel visibility. Host shutdown or service failure must leave an explicit interrupted/failed state, not a permanently running entry.
 - Persist enough metadata to explain the result and regenerate it. Regeneration produces a new generation record and resets associated study progress.
-- Recover quietly within a fixed budget. Each request makes at most three model calls: the chosen model twice, then the recommended known-good model once. Every try is recorded in the artifact's details. There is no other automatic retry. Image and audio calls are not retried automatically.
+- Second pass is enabled by default: validate a private draft, obtain concise source-grounded criticism, then request a complete revision from the same sources and options. Only the final result is published or passed to a file builder; the draft and criticism remain transient. Use the same normal job/spinner. The saved toggle applies to future jobs and is captured per request.
+- Recover quietly within one shared budget: at most two recovery calls across all stages (a chosen-model retry, then a distinct recommended fallback), for a maximum of five content-model calls with Second pass and three without. Healthy requests use three or one respectively. Each actual call is recorded by stage, model and outcome. Chat summarization is separate; no additional hidden recovery or automatic audio retry is permitted. Review/revision failure or cancellation must not publish the first draft as success.
 - Require confirmation before overwriting an existing user file or deleting artifacts/runtime data.
 
 ## 6. Sources and grounding
 
-The source contract is normalized text plus a source locator. Implemented inputs: project files read by the service (text and data formats, HTML, DOCX via Mammoth, PDF via PDF.js with no OCR, PPTX and XLSX via the bundled ZIP reader, and DOC, XLS and PPT through Studio's own Compound File Binary reader) and the current chat only. Excel date cells are converted from serial numbers using their number formats. Total source text is limited to 200,000 characters and 50 files. A chat over 10,000 characters is sent as compressed context: OpenCode's own compaction summary when it fits, otherwise a summary from OpenCode's non-mutating session generation (POST /api/session/:id/generate). Arbitrary PDF/Office ingestion is not implied by support for generating those output formats; additional input parsers must be explicitly included and packaged.
+The source contract is normalized text plus a source locator. Implemented inputs: project files read by the service (text and data formats, HTML, DOCX via Mammoth, PDF via PDF.js with no OCR, PPTX and XLSX via the bundled ZIP reader, and DOC, XLS and PPT through Studio's own Compound File Binary reader) and the current chat only. Excel date cells are converted from serial numbers using their number formats. Total source text is limited to 200,000 characters and 50 files. Chat compression begins only above 25,000 whitespace-separated words, using the current context (including any completed OpenCode compaction summary and newer messages). OpenCode's non-mutating session generation requests at most 20,000 words; results over 25,000 words or min(original characters, 150,000) characters are refused, not truncated. Measurement never makes that model call. Word metadata and original full-word counts are retained. Arbitrary PDF/Office ingestion is not implied by support for generating those output formats; additional input parsers must be explicitly included and packaged.
 
 - Read only sources the user selected or explicitly granted to the extension. Opening a panel does not grant unrestricted conversation access.
 - Use OpenChamber's message/session actions and conversation capability for session content. Detect and disclose incomplete or truncated host snapshots.
@@ -141,7 +141,6 @@ Trusted JavaScript builders inside the service render validated structured model
 
 - **Text (settled for local hosts):** Studio uses the guest frame's local OpenChamber origin as a proxy to the active OpenCode v2 instance. It verifies the active session and its directory, lists models from OpenCode's base configuration, and calls OpenCode's stateless generation route with the selected model. It reads no credentials, never starts or discovers another OpenCode server, and refuses hosts that require authentication.
 - Default to an automatic model choice, with an override in settings. Do not assume the host's Small Model API is sufficient. A switch to the fallback model is recorded in the artifact's details.
-- **Images (open):** configure a separate image-generation connection. A text or vision-input model is not automatically an image-output model, and OpenCode's generation route returns text only.
 - Keep credentials in an appropriate host/server-side credential store, never in release archives, source bundles, artifact files, or iframe messages.
 
 ### E. Optional Kokoro pack
@@ -150,7 +149,7 @@ Package the audio runtime together with Kokoro model weights, voice assets, phon
 
 ## 8. Kokoro download and lifecycle
 
-1. Default state is Not installed. Podcast explains the requirement; the other 11 formats do not depend on it.
+1. Default state is Not installed. Podcast explains the requirement; the other 10 formats do not depend on it.
 2. On Download Kokoro, show the applicable platform, actual download size, required disk space, publisher/source, and destination before proceeding.
 3. Download the complete version-pinned pack directly through Studio's service to its private data area. Do not transfer the binary payload through the iframe message bridge or OpenChamber's extension ZIP importer.
 4. Verify release authenticity and integrity, extract safely, and run a bounded compatibility/health check before marking the pack Ready.
@@ -203,15 +202,15 @@ Large-file preview/export must use a proven host-compatible path, such as servic
 
 ## 12. Acceptance criteria
 
-Release qualification must cover every advertised OS/architecture and all 12 formats; do not infer platform coverage from a development-machine test.
+Release qualification must cover every advertised OS/architecture and all 11 formats; do not infer platform coverage from a development-machine test.
 
 | Area | Required evidence |
 |---|---|
 | Independent installation | Install and run as an optional extension on a clean supported OpenChamber host, without modifying OpenChamber setup or core code. |
 | No external installations | No system Python, separate Node installation, Docker, Office, LibreOffice, other study application, separately installed plugin, or manually managed backend is required. |
 | Platform packaging | Correct platform guard and optional pack selection, declared OS/CPU compatibility, bundled fonts, and working paths on each advertised target. |
-| Format coverage | F01-F12 each produce the specified real result from supplied sources. Office files are editable and open in compatible applications, not slide/page screenshots; interactive viewers behave as specified. |
-| Models | Text and image routes use intended providers with correct authentication. Long-job behavior is not falsely represented as supported by the Small Model shortcut alone. |
+| Format coverage | F01-F11 each produce the specified real result from supplied sources. Office files are editable and open in compatible applications, not slide/page screenshots; interactive viewers behave as specified. |
+| Models | The text route uses the intended provider with correct authentication. Long-job behavior is not falsely represented as supported by the Small Model shortcut alone. |
 | Sources | Only intended sources are read; coverage and omissions are visible; truncated session/source input is not presented as complete. |
 | Optional audio | Without Kokoro, Studio and unrelated formats work. Download, verification, activation, failure handling, and subsequent podcast generation work through the extension alone. |
 | Jobs and files | Long jobs avoid bridge timeouts; cancellation/interruption is visible; large artifacts can be retrieved/exported without truncation. |
@@ -227,7 +226,7 @@ Acceptance is not yet proven. No performance, installation-size, or "works every
 1. **Qualify boundaries:** done on Windows for local-host model access, the host-launched service, source handoff, and artifact transfer. Package sizes must be re-measured as libraries are added.
 2. **Core Studio:** done on Windows: panel, format grid, sources, jobs/history, Summary, Flashcards, Quiz, Mind map, and Web page.
 3. **Documents:** done on Windows: JavaScript DOCX, PPTX, XLSX, and PDF builders with previews and exports.
-4. **Media (next):** image/infographic adapters and the optional Kokoro download, activation, and podcast workflow.
+4. **Infographic and audio:** Infographic is built. Next is the optional Kokoro download, activation, and podcast workflow.
 5. **Release qualification:** run the acceptance criteria across the complete advertised platform matrix.
 
 This sequence does not remove any format from the complete product scope.
@@ -238,14 +237,13 @@ This sequence does not remove any format from the complete product scope.
 - No self-packaged Python; document formats use JavaScript builders in the service.
 - Text generation uses the local OpenChamber proxy, OpenCode's base model catalog, and its stateless route. Password-protected, remote, and relay hosts are out of scope.
 - Document builders: `docx`, `pptxgenjs`, `write-excel-file`, and `pdfkit`; panel previews render the validated artifact (see section 4).
-- One font everywhere: Inter 4.1 (OFL), replacing DejaVu Sans. Embedded in the panel, previews, PDF, Word, web pages and infographic SVG/PNG; named only in PPTX and XLSX, which these libraries cannot embed.
-- Infographics are drawn by AntV Infographic from a model-chosen layout on a checked allowlist, not by an image model. Icons come from AntV's keyword icon service; PNG is rasterized in the panel because the library sets text in SVG `foreignObject`.
+- Current default font: standard Iosevka 34.9.0 (OFL), normal-width regular/bold. Embedded in the panel, previews, PDF, Word, web pages and infographic SVG; rasterized into PNG. PPTX/XLSX name it without embedding, and plain Markdown carries no font. Full Unicode coverage is retained, including supplementary symbols in infographic metrics. The earlier font-selection history in pass 3 remains historical.
+- Infographics are drawn by AntV Infographic from a model-chosen layout on a checked allowlist. Icons come from AntV's keyword icon service; PNG is rasterized in the panel because the library sets text in SVG `foreignObject`.
 
 ### Decisions still open
 
 - Exact supported CPU architectures, minimum OS/libc versions, and minimum OpenChamber/OpenCode versions.
 - Whether true file rendering (`pdf.js`, `docx-preview`) is worth its bundle size and iframe-policy cost.
-- The image-generation provider and how its credentials are held.
 - The Kokoro runtime (pure JavaScript/WebAssembly or native packs), pack hosting, and signing.
 - Additional source input formats, if any, beyond text/Markdown and selected conversation snapshots.
 - Release artifact naming, dependency redistribution materials, and upgrade/data-retention behavior.
@@ -255,7 +253,7 @@ This sequence does not remove any format from the complete product scope.
 Early research considered SurfSense commit `7fb479c361414e1ffd180860eb0b5eb5afb0c4e3` and OpenChamber commit `de84da29e9a742e10a64af102119f125fb4471af`. These are background references, not the product's architecture or a claim of affiliation. Ideas Studio's requirements and implementation are maintained independently; NOTICE preserves the documented historical adaptations and third-party credits.
 
 - [Google NotebookLM](https://notebooklm.google.com/) and [Gemini](https://gemini.google.com/) - inspiration for source-grounded study and creation workflows
-- [SurfSense Studio architecture and all 12 formats](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/docs/architecture/studio.md)
+- [SurfSense Studio architecture and formats](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/docs/architecture/studio.md)
 - [SurfSense native packaging and audio dependencies](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/docs/architecture/packaging.md)
 - [SurfSense Office runner considered during early research, not included](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/surfsense_local/backend/worker/studio/office/runner.py)
 - [SurfSense license](https://github.com/MODSetter/SurfSense/blob/7fb479c361414e1ffd180860eb0b5eb5afb0c4e3/LICENSE) and [OpenChamber license](https://github.com/openchamber/openchamber/blob/de84da29e9a742e10a64af102119f125fb4471af/LICENSE)

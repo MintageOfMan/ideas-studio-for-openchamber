@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { dependencyLicenses } from './dependency-licenses.mjs';
+import { FONT_FAMILY, FONT_FILES } from '../shared/common/font.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const { name, version, description, openchamber } = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
@@ -10,8 +11,8 @@ const targets = [
   { folder: 'windows-11-x64', platform: 'win32', arch: 'x64' },
   { folder: 'linux-fedora-amd64', platform: 'linux', arch: 'x64' },
 ];
-// Inter, the one Studio font: TTF for PDF and Word embedding, WOFF2 for the panel, web pages and SVG.
-const SERVICE_FONTS = ['Inter-Regular.ttf', 'Inter-Bold.ttf', 'Inter-Regular.woff2', 'Inter-Bold.woff2'];
+// Iosevka, the one Studio font: TTF for PDF and Word embedding, WOFF2 for the panel, web pages and SVG.
+const SERVICE_FONTS = Object.values(FONT_FILES).flatMap((face) => [face.ttf, face.woff2]);
 const SEPARATOR = '\n\n----------------------------------------\n\n';
 
 // Only packages that actually contribute bytes to a bundle need their notices shipped.
@@ -30,8 +31,20 @@ async function licenses(inputs) {
     '',
   ].join('\n'));
   entries.push(await fs.readFile(path.join(root, 'shared/licenses/SurfSense-LICENSE.txt'), 'utf8'));
-  entries.push(`Inter 4.1 (https://github.com/rsms/inter), files ${SERVICE_FONTS.join(', ')} in service/fonts/ (and the WOFF2 faces inside panel/main.js), unmodified.\nEmbedded in generated Word documents, web pages, infographics and PDFs. The upstream license file follows verbatim.\n`);
-  entries.push(await fs.readFile(path.join(root, 'shared/fonts/Inter-LICENSE.txt'), 'utf8'));
+  const fontSource = JSON.parse(await fs.readFile(path.join(root, `shared/fonts/${FONT_FAMILY}-SOURCE.json`), 'utf8'));
+  entries.push([
+    `${FONT_FAMILY} ${fontSource.version} (${fontSource.website}), ${fontSource.width} width, ${fontSource.style.toLowerCase()} regular and bold.`,
+    `Repository: ${fontSource.repository}`,
+    `Release: ${fontSource.release}`,
+    `Files ${SERVICE_FONTS.join(', ')} in service/fonts/ (and the WOFF2 faces inside panel/main.js), unmodified.`,
+    ...fontSource.archives.map((archive) => `Download: ${archive.url}\nSHA-256: ${archive.sha256}`),
+    ...fontSource.files.map((file) => `${file.name}: ${file.bytes} bytes; MD5: ${file.md5}`),
+    'Embedded in generated Word documents, web pages, infographic SVGs and PDFs; rasterized in infographic PNGs.',
+    'PPTX and XLSX name Iosevka without embedding it. Plain Markdown carries no font.',
+    `The upstream ${fontSource.license.spdx} license text follows (${fontSource.license.source}).`,
+    '',
+  ].join('\n'));
+  entries.push(await fs.readFile(path.join(root, 'shared/fonts', fontSource.license.file), 'utf8'));
   // Keep upstream notice wording intact without carrying whitespace-only diff errors.
   return entries.join(SEPARATOR).replace(/[ \t]+$/gm, '') + '\n';
 }
@@ -52,6 +65,8 @@ for (const target of targets) {
   const directory = path.join(root, target.folder);
   await fs.mkdir(path.join(directory, 'panel'), { recursive: true });
   await fs.mkdir(path.join(directory, 'service/fonts'), { recursive: true });
+  const extraFonts = (await fs.readdir(path.join(directory, 'service/fonts'))).filter((file) => !SERVICE_FONTS.includes(file));
+  if (extraFonts.length) throw new Error(`${target.folder}/service/fonts contains unused files: ${extraFonts.join(', ')}. Move them into ignored temp/ before building.`);
   const node = {
     absWorkingDir: root, bundle: true, platform: 'node', format: 'esm', target: 'node22', minify: true, legalComments: 'eof', metafile: true,
     define: { __STUDIO_TARGET__: JSON.stringify(target), __STUDIO_FONTS__: JSON.stringify('./fonts/'), __STUDIO_WORKER__: JSON.stringify('./infographic-worker.js') },

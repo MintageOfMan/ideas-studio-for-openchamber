@@ -28,7 +28,7 @@ export async function buildXlsx(artifact, meta) {
     data: info.map(([label, value]) => [label === null ? null : { value: label, fontWeight: 'bold' }, value === null ? null : { value, wrap: true }]),
     columns: [{ width: 24 }, { width: 100 }],
   });
-  // Excel names the font but cannot embed it; Inter shows where installed.
+  // Excel names the font but cannot embed it; Iosevka shows where installed.
   const bytes = await writeExcelFile(sheets, { fontFamily: FONT_FAMILY }).toBuffer();
   return { bytes: normalizeZip(bytes, meta.createdAt), notes: [], pages: sheets.length };
 }

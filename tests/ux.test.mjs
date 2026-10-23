@@ -14,7 +14,7 @@ import { modelKey } from '../shared/common/core.mjs';
 const chosen = { providerID: 'unit-test', id: 'chosen' };
 const fallback = { providerID: 'unit-test', id: 'fallback' };
 const reply = JSON.stringify({ title: 'Quiz', questions: [{ question: 'Q?', options: ['A', 'B', 'C', 'D'], answer: 0, explanation: 'E.' }] });
-const request = (extra = {}) => ({ id: randomUUID(), format: 'quiz', sources: [{ path: 'a.md', content: 'Alpha.' }, { path: 'notes/b.txt', content: 'Beta.' }], model: chosen, ...extra });
+const request = (extra = {}) => ({ id: randomUUID(), format: 'quiz', sources: [{ path: 'a.md', content: 'Alpha.' }, { path: 'notes/b.txt', content: 'Beta.' }], model: chosen, secondPass: false, ...extra });
 
 async function settle(jobs, root, id) {
   for (let attempt = 0; attempt < 300; attempt += 1) {
