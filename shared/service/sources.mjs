@@ -6,7 +6,7 @@ import path from 'node:path';
 import { strFromU8, unzipSync } from 'fflate';
 import { decodeHTML, decodeXML } from 'entities';
 import mammoth from 'mammoth';
-import { StudioError } from '../common/core.mjs';
+import { LIMITS, StudioError } from '../common/core.mjs';
 import { SOURCE_KINDS, sourceKind } from '../common/sources.mjs';
 import { excelDateText, isDateFormat } from './excel-dates.mjs';
 import { docText, xlsText } from './legacy.mjs';
@@ -190,19 +190,56 @@ const EXTRACTORS = {
   ppt: pptText,
 };
 
-// Resolves a project-relative path to a regular file inside the project, refusing links out.
-async function projectFile(directory, relative) {
-  const target = path.resolve(directory, ...relative.split('/'));
-  const inside = path.relative(directory, target);
-  if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) throw new StudioError('BAD_SOURCE', 'is outside this project.');
+function projectParts(relative, allowRoot) {
+  if (typeof relative !== 'string' || /[\\:\0]/.test(relative)
+    || (!relative && !allowRoot)
+    || (relative && relative.split('/').some((part) => !part || part === '.' || part === '..'))) {
+    throw new StudioError('BAD_SOURCE', 'is outside this project.');
+  }
+  return relative ? relative.split('/') : [];
+}
+
+async function sourceInfo(target) {
   const info = await fs.lstat(target).catch(() => null);
   if (!info) throw new StudioError('MISSING_SOURCE', 'no longer exists.');
-  if (info.isSymbolicLink() || !info.isFile()) throw new StudioError('BAD_SOURCE', 'is a shortcut or a folder, not a file.');
+  return info;
+}
+
+async function sourceRealpath(target) {
+  try { return await fs.realpath(target); }
+  catch { throw new StudioError('MISSING_SOURCE', 'no longer exists.'); }
+}
+
+// Check every component, not just the final file: a regular file can sit behind a directory
+// shortcut. Resolve the trusted root once, and never follow a shortcut below it.
+async function projectEntry(directory, relative, allowRoot = false) {
+  const parts = projectParts(relative, allowRoot);
+  const root = await sourceRealpath(directory);
+  let target = root;
+  let info = await sourceInfo(target);
+  for (const part of parts) {
+    if (!info.isDirectory()) throw new StudioError('BAD_SOURCE', 'is not inside a folder.');
+    target = path.join(target, part);
+    info = await sourceInfo(target);
+    if (info.isSymbolicLink()) throw new StudioError('BAD_SOURCE', 'is a shortcut or a folder, not a file.');
+    target = await sourceRealpath(target);
+    const inside = path.relative(root, target);
+    if (inside === '..' || inside.startsWith(`..${path.sep}`) || path.isAbsolute(inside)) {
+      throw new StudioError('BAD_SOURCE', 'is outside this project.');
+    }
+  }
+  return { target, info };
+}
+
+// Resolves a project-relative path to a regular file inside the project, refusing links out.
+async function projectFile(directory, relative) {
+  const { target, info } = await projectEntry(directory, relative);
+  if (!info.isFile()) throw new StudioError('BAD_SOURCE', 'is a shortcut or a folder, not a file.');
   if (info.size > FILE_BYTES) throw new StudioError('FILE_TOO_LARGE', `is too big (over ${FILE_BYTES / 1024 / 1024} MB).`);
   return { target, info };
 }
 
-// Cache by path, size and modification time, so the source list and the job share one parse.
+// Cache by path, size and modification time, so explicit selection and the job share one parse.
 const cache = new Map();
 
 export async function readSource(directory, relative) {
@@ -232,49 +269,100 @@ export async function readSourceOrExplain(directory, relative) {
   }
 }
 
+// Called only when the user selects a file. Its text stays in the service and its parse cache.
+export async function inspectSource(directory, relative) {
+  const { text, error } = await readSourceOrExplain(directory, relative);
+  return error ? { path: relative, error: error.message } : { path: relative, characters: text.length };
+}
+
 // ---------- listing ----------
 
-// Folders that hold tooling or build output rather than someone's material.
-const SKIP_FOLDERS = new Set(['node_modules', '.git', '.studio', 'temp', 'dist', 'build', 'out', 'coverage', '__pycache__', 'venv', '.venv']);
-// Legal and package boilerplate is rarely what someone wants to study.
-const BOILERPLATE = /^(license|licence|copying|notice|third-party|changelog|code_of_conduct|package(-lock)?\.json$|yarn\.lock|pnpm-lock|tsconfig|jsconfig|composer\.(json|lock)$)|-license\.txt$/i;
-const MAX_FILES = 60;
-const MAX_DEPTH = 2;
-const LIST_BUDGET_MS = 12_000;
+const PAGE_ENTRIES = 100;
+const SORT_FIELDS = new Set(['name', 'size', 'createdAt', 'modifiedAt']);
+const names = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const compareNames = (a, b) => names.compare(a.name, b.name) || a.name.localeCompare(b.name);
+const entryType = (info) => (info.isDirectory() ? 'directory' : info.isFile() ? 'file' : 'other');
 
-// Lists readable files near the project root with their exact text size, so the panel can offer
-// only what fits. A file that cannot be read is listed with the reason instead of its size.
-export async function listSources(directory) {
-  const found = [];
-  const walk = async (relative, depth) => {
-    let entries;
-    try { entries = await fs.readdir(path.join(directory, ...relative.split('/').filter(Boolean)), { withFileTypes: true }); }
-    catch { return; }
-    entries.sort((a, b) => a.name.localeCompare(b.name));
-    for (const entry of entries) {
-      if (found.length >= MAX_FILES) return;
-      const child = relative ? `${relative}/${entry.name}` : entry.name;
-      if (entry.isFile() && sourceKind(entry.name) && !BOILERPLATE.test(entry.name)) found.push({ path: child, name: entry.name, folder: relative, kind: sourceKind(entry.name) });
-    }
-    if (depth >= MAX_DEPTH) return;
-    for (const entry of entries) {
-      if (found.length >= MAX_FILES) return;
-      if (entry.isDirectory() && !entry.name.startsWith('.') && !SKIP_FOLDERS.has(entry.name)) await walk(relative ? `${relative}/${entry.name}` : entry.name, depth + 1);
-    }
+async function entryMetadata(target, folder, entry) {
+  const relative = folder ? `${folder}/${entry.name}` : entry.name;
+  const result = {
+    path: relative, name: entry.name, folder, entryType: entryType(entry),
+    kind: entry.isFile() ? sourceKind(entry.name) : null,
+    size: null, createdAt: null, modifiedAt: null,
   };
-  await walk('', 0);
-  // A few at a time: PDFs and Office files take real work to read. The host bridge gives up after
-  // about 20 seconds, so files still being read are returned as pending; reading carries on into
-  // the cache and the panel asks again.
-  const queue = [...found];
-  const workers = Promise.all(Array.from({ length: 4 }, async () => {
-    for (let file = queue.shift(); file; file = queue.shift()) {
-      const { text, error } = await readSourceOrExplain(directory, file.path);
-      if (error) file.error = error.message.slice(file.path.length).trim();
-      else file.characters = text.length;
-      file.done = true;
+  let info;
+  try { info = await fs.lstat(path.join(target, entry.name)); }
+  catch (error) {
+    return { ...result, error: error.code === 'ENOENT' ? 'no longer exists.' : 'could not be checked.' };
+  }
+  result.entryType = entryType(info);
+  result.kind = info.isFile() ? sourceKind(entry.name) : null;
+  // Folder sizes would require walking their contents. Zero birthtime means unavailable on
+  // some filesystems; never substitute modification/change time for a missing creation date.
+  result.size = info.isFile() && Number.isFinite(info.size) && info.size >= 0 ? info.size : null;
+  result.createdAt = Number.isFinite(info.birthtimeMs) && info.birthtimeMs !== 0 ? info.birthtimeMs : null;
+  result.modifiedAt = Number.isFinite(info.mtimeMs) ? info.mtimeMs : null;
+  if (info.isSymbolicLink()) result.error = 'is a shortcut and cannot be opened.';
+  else if (result.entryType === 'other') result.error = 'is not a regular file or folder.';
+  else if (info.isFile() && !result.kind) result.error = 'is a kind of file Studio cannot read.';
+  else if (info.isFile() && info.size > FILE_BYTES) result.error = `is too big (over ${FILE_BYTES / 1024 / 1024} MB).`;
+  return result;
+}
+
+function compareEntries(sort, direction) {
+  const order = direction === 'asc' ? 1 : -1;
+  return (a, b) => {
+    const folders = Number(b.entryType === 'directory') - Number(a.entryType === 'directory');
+    if (folders) return folders;
+    if (sort === 'name') return order * compareNames(a, b);
+    // Unknown values stay last within each group, even when sorting downwards.
+    if (a[sort] === null && b[sort] !== null) return 1;
+    if (b[sort] === null && a[sort] !== null) return -1;
+    return order * ((a[sort] === null ? 0 : a[sort] - b[sort]) || compareNames(a, b));
+  };
+}
+
+// Lists only this folder's immediate children. Browsing never opens or extracts a file, and
+// hidden/tool folders and unsupported files are kept visible. Paths keep their original names.
+export async function listSources(directory, { folder = '', offset = 0, sort = 'name', direction = 'asc' } = {}) {
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new StudioError('BAD_OFFSET', 'Invalid folder page.');
+  if (!SORT_FIELDS.has(sort) || !['asc', 'desc'].includes(direction)) throw new StudioError('BAD_SORT', 'Choose a supported folder order.');
+  let target;
+  try {
+    const entry = await projectEntry(directory, folder, true);
+    if (!entry.info.isDirectory()) throw new StudioError('BAD_SOURCE', 'is not a folder.');
+    target = entry.target;
+  } catch (error) {
+    if (error instanceof StudioError) throw new StudioError(error.code, `${folder || 'This project'} ${error.message}`);
+    throw error;
+  }
+  let children;
+  try { children = await fs.readdir(target, { withFileTypes: true }); }
+  catch { throw new StudioError('BAD_FOLDER', 'This folder could not be opened.'); }
+  const found = new Array(children.length);
+  let cursor = 0;
+  // Bounded metadata requests; no recursive walk or background parsing after this call returns.
+  await Promise.all(Array.from({ length: Math.min(8, children.length) }, async () => {
+    while (cursor < children.length) {
+      const index = cursor++;
+      found[index] = await entryMetadata(target, folder, children[index]);
     }
   }));
-  await Promise.race([workers, new Promise((resolve) => { setTimeout(resolve, LIST_BUDGET_MS).unref(); })]);
-  return found.map(({ done, ...file }) => (done ? file : { ...file, pending: true }));
+  found.sort(compareEntries(sort, direction));
+  const entries = [];
+  const total = found.length;
+  let end = offset;
+  let length = JSON.stringify({ folder, entries, total, next: total }).length;
+  // Very deep paths repeat in each entry. Also cap serialized length so a page still fits the
+  // bridge when fewer than 100 long names fill it, leaving room for the route's other metadata.
+  while (end < total && entries.length < PAGE_ENTRIES) {
+    const size = JSON.stringify(found[end]).length + 1;
+    if (length + size > LIMITS.response - 4_000) {
+      if (!entries.length) throw new StudioError('FOLDER_TOO_LARGE', 'This folder has names too long to show.');
+      break;
+    }
+    entries.push(found[end++]);
+    length += size;
+  }
+  return { folder, entries, total, next: end < total ? end : null };
 }

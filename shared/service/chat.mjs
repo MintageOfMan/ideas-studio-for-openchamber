@@ -1,10 +1,11 @@
-// The current chat as a source. Only the active session is ever read, and only when the user
-// ticks it. Small chats go as they are; larger ones go as compressed context (see chatSource).
+// The current chat as a source. Its available text is measured without a model call; the
+// panel selects it by default. Only a selected chat enters a generation request. Small chats
+// go as they are; larger ones go as compressed context (see chatSource).
 import { createHash } from 'node:crypto';
 import { StudioError } from '../common/core.mjs';
-import { CHAT_LIMIT } from '../common/sources.mjs';
+import { CHAT_SUMMARY_CHARACTER_LIMIT, CHAT_WORD_LIMIT, countWords } from '../common/sources.mjs';
 
-const SUMMARY_TARGET = 8_000;
+const SUMMARY_WORD_TARGET = 20_000;
 
 // Readable conversation text: the compaction summary, then user and assistant words.
 // Reasoning, tool calls and tool output are left out; they are working notes, not the chat.
@@ -24,10 +25,11 @@ export function transcript(messages) {
   return lines.join('\n\n').trim();
 }
 
-const SUMMARY_PROMPT = [
+const summaryPrompt = (characters) => [
   'Write a compressed context of this whole conversation for someone who will turn it into study material.',
-  'Keep every decision, fact, figure, name, open question and result that matters; drop chatter, tool output and repetition.',
-  `Use plain text with short paragraphs or bullet points. Stay under ${SUMMARY_TARGET.toLocaleString('en-US')} characters.`,
+  'Keep every decision, fact, figure, name, open question and result that matters; drop chatter and repetition.',
+  'Do not include private reasoning, tool calls or tool output.',
+  `Use plain text with short paragraphs or bullet points. Use at most ${SUMMARY_WORD_TARGET.toLocaleString('en-US')} words (whitespace-separated tokens) and at most ${characters.toLocaleString('en-US')} characters.`,
   'Write only the summary.',
 ].join(' ');
 
@@ -35,11 +37,13 @@ const SUMMARY_PROMPT = [
 export async function measureChat(connection) {
   const text = transcript(await connection.chatContext());
   if (!text) return { available: false, reason: 'This chat has no messages yet.' };
-  return { available: true, characters: Math.min(text.length, CHAT_LIMIT), compressed: text.length > CHAT_LIMIT };
+  const words = countWords(text);
+  const compressed = words > CHAT_WORD_LIMIT;
+  return { available: true, characters: compressed ? Math.min(text.length, CHAT_SUMMARY_CHARACTER_LIMIT) : text.length, words, compressed };
 }
 
 // The text sent as the chat source, and how it was made:
-// - full: the active context fits in CHAT_LIMIT. If OpenCode compacted the chat, that context
+// - full: the active context fits in CHAT_WORD_LIMIT. If OpenCode compacted the chat, that context
 //   already starts with OpenCode's own summary.
 // - compressed: OpenCode summarizes the session context (POST /api/session/:id/generate),
 //   which uses the chat's model and may be billed, but never changes the chat.
@@ -47,14 +51,17 @@ export async function chatSource(connection, signal) {
   const full = transcript(await connection.chatContext());
   if (!full) throw new StudioError('EMPTY_CHAT', 'This chat has no messages yet.');
   const digest = createHash('md5').update(full).digest('hex');
-  if (full.length <= CHAT_LIMIT) return { content: full, how: 'full', characters: full.length, md5: digest };
+  const fullWords = countWords(full);
+  if (fullWords <= CHAT_WORD_LIMIT) return { content: full, how: 'full', characters: full.length, words: fullWords, md5: digest };
+  const characterLimit = Math.min(full.length, CHAT_SUMMARY_CHARACTER_LIMIT);
   let summary;
-  try { summary = (await connection.summarizeChat(SUMMARY_PROMPT, signal))?.trim(); }
+  try { summary = (await connection.summarizeChat(summaryPrompt(characterLimit), signal))?.trim(); }
   catch (error) {
     if (signal?.aborted) throw error;
     throw new StudioError('CHAT_SUMMARY_FAILED', 'Studio could not shorten this chat. Try again, or untick the chat.');
   }
   if (!summary) throw new StudioError('CHAT_SUMMARY_FAILED', 'Studio could not shorten this chat. Try again, or untick the chat.');
-  if (summary.length > CHAT_LIMIT) throw new StudioError('CHAT_SUMMARY_FAILED', 'The shortened chat was still too long. Try again, or untick the chat.');
-  return { content: summary, how: 'compressed', characters: summary.length, md5: digest, fullCharacters: full.length };
+  const words = countWords(summary);
+  if (words > CHAT_WORD_LIMIT || summary.length > characterLimit) throw new StudioError('CHAT_SUMMARY_FAILED', 'The shortened chat was still too long. Try again, or untick the chat.');
+  return { content: summary, how: 'compressed', characters: summary.length, words, md5: digest, fullCharacters: full.length, fullWords };
 }

@@ -121,7 +121,7 @@ export const pptx = Object.freeze({
       task: 'write a slide deck from the source.',
       rules: [
         ...COMMON_RULES,
-        `Use as many slides as the material earns, at most ${CAPS.slides}. A title slide is added for you; do not write one.`,
+        `Follow the preference field's content-slide target, at most ${CAPS.slides} content slides. If no target is supplied, use as many as the material earns within that limit. The builder adds 1 title slide, included in the preference's total; do not write it.`,
         'A slide title states the point of the slide, not its topic.',
         `At most ${CAPS.bullets} short bullets per slide. Put the explanation a speaker would give in the notes.`,
       ],

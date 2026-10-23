@@ -38,13 +38,13 @@ test('infographic replies are checked against the chosen layout, with every chan
   assert.equal(libraryOptions(infographic.build(JSON.stringify(steps)).artifact).template, LAYOUTS.steps.template);
 });
 
-test('the renderer draws a self-contained SVG in Inter and keeps the service free of DOM globals', async () => {
+test('the renderer draws a self-contained SVG in Iosevka and keeps the service free of DOM globals', async () => {
   const { artifact } = infographic.build(JSON.stringify(steps));
   const built = await buildFile('infographic', artifact, meta);
   const svg = built.bytes.toString('utf8');
   assert.match(svg, /^<\?xml[^>]*\?>\n<svg[\s>]/);
   assert.ok(!svg.includes('xml-stylesheet') && !svg.includes('assets.antv.antgroup.com'), 'no link to the library CDN font');
-  assert.ok(svg.includes('font-family: Inter') && svg.includes('data:font/woff2;base64,'));
+  assert.ok(svg.includes('font-family: Iosevka') && svg.includes('data:font/woff2;base64,'));
   for (const text of ['How a seed grows', 'Planted in soil', 'Makes new seeds']) assert.ok(svg.includes(text), text);
   assert.ok(built.preview.length < 60_000 && !built.preview.includes('base64,'), 'preview is light and font-free');
   assert.equal(typeof globalThis.window, 'undefined');
@@ -62,7 +62,7 @@ test('infographic jobs store the SVG, carry a preview, and save SVG plus an uplo
   await fs.mkdir('temp', { recursive: true });
   const root = await fs.mkdtemp(path.join(path.resolve('temp'), 'infographic-test-'));
   const jobs = new StudioJobs();
-  const input = { id: randomUUID(), format: 'infographic', sources: [{ path: 'a.md', content: 'Seeds grow.' }], model };
+  const input = { id: randomUUID(), format: 'infographic', sources: [{ path: 'a.md', content: 'Seeds grow.' }], model, secondPass: false };
   await jobs.start(root, input, async () => ({ text: JSON.stringify(steps) }));
   const record = await settle(jobs, root, input.id);
   assert.equal(record.status, 'completed', JSON.stringify(record.error));

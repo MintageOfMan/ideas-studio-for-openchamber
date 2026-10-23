@@ -4,12 +4,12 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { docx, pdf, pptx, xlsx } from '../shared/common/documents.mjs';
-import { CHAT_LIMIT, CHAT_SOURCE, sourceKind } from '../shared/common/sources.mjs';
+import { CHAT_SOURCE, CHAT_SUMMARY_CHARACTER_LIMIT, CHAT_WORD_LIMIT, countWords, sourceKind } from '../shared/common/sources.mjs';
 import { quiz } from '../shared/common/quiz.mjs';
 import { buildFile } from '../shared/service/builders/index.mjs';
 import { chatSource, measureChat, transcript } from '../shared/service/chat.mjs';
 import { StudioJobs } from '../shared/service/jobs.mjs';
-import { htmlText, listSources, readSource, readSourceOrExplain } from '../shared/service/sources.mjs';
+import { htmlText, inspectSource, listSources, readSource, readSourceOrExplain } from '../shared/service/sources.mjs';
 
 // Fixtures are built by Studio's own file builders, so no binary test files are checked in.
 const meta = { title: 'T', source: 'a.md', model: 'unit-test/controlled', createdAt: new Date('2026-10-06T12:00:00Z'), notes: [] };
@@ -60,15 +60,16 @@ test('every supported file type yields its text, and unreadable files say why', 
   assert.equal(htmlText('<p>a&nbsp;b</p><br>c'), 'a b\n\nc');
 });
 
-test('the source list measures files, skips tooling folders and boilerplate, and explains failures', async () => {
+test('the source list shows immediate entries and reads a document only when selected', async () => {
   const root = await project();
-  const files = await listSources(root);
-  const byPath = Object.fromEntries(files.map((file) => [file.path, file]));
-  assert.ok(!byPath['LICENSE.md'] && !byPath['node_modules/skip.md']);
-  assert.equal(byPath['docs/more.txt'].characters, 'Nested notes.'.length);
+  const { entries } = await listSources(root);
+  const byPath = Object.fromEntries(entries.map((file) => [file.path, file]));
+  assert.ok(byPath['LICENSE.md'] && byPath.node_modules && byPath.docs);
+  assert.ok(!byPath['node_modules/skip.md'] && !byPath['docs/more.txt']);
   assert.equal(byPath['report.pdf'].kind, 'pdf');
-  assert.ok(byPath['report.pdf'].characters > 0);
-  assert.equal(byPath['binary.txt'].error, 'is not readable as text.');
+  assert.ok(entries.every((file) => file.characters === undefined));
+  assert.ok((await inspectSource(root, 'report.pdf')).characters > 0);
+  assert.match((await inspectSource(root, 'binary.txt')).error, /not readable as text/);
 });
 
 test('a file outside the project or behind a link is never read', async () => {
@@ -89,7 +90,7 @@ test('jobs read files by path in the service, record their identity, and name a 
   const root = await project();
   const jobs = new StudioJobs();
   let prompt = '';
-  const ok = { id: randomUUID(), format: 'quiz', sources: [{ path: 'report.pdf' }, { path: 'deck.pptx' }], model };
+  const ok = { id: randomUUID(), format: 'quiz', sources: [{ path: 'report.pdf' }, { path: 'deck.pptx' }], secondPass: false, model };
   await jobs.start(root, ok, async (text) => { prompt = text; return { text: reply }; });
   const record = await settle(jobs, root, ok.id);
   assert.equal(record.status, 'completed', JSON.stringify(record.error));
@@ -97,7 +98,7 @@ test('jobs read files by path in the service, record their identity, and name a 
   assert.deepEqual(record.sources.map((source) => source.path), ['report.pdf', 'deck.pptx']);
   assert.ok(record.sources.every((source) => source.characters > 0 && /^[0-9a-f]{32}$/.test(source.md5)));
 
-  const bad = { id: randomUUID(), format: 'quiz', sources: [{ path: 'notes.md' }, { path: 'binary.txt' }], model };
+  const bad = { id: randomUUID(), format: 'quiz', sources: [{ path: 'notes.md' }, { path: 'binary.txt' }], secondPass: false, model };
   let calls = 0;
   await jobs.start(root, bad, async () => { calls += 1; return { text: reply }; });
   const failed = await settle(jobs, root, bad.id);
@@ -106,12 +107,12 @@ test('jobs read files by path in the service, record their identity, and name a 
 });
 
 const conversation = (count, size) => Array.from({ length: count }, (_, index) => (index % 2
-  ? { type: 'assistant', content: [{ type: 'reasoning', text: 'hidden' }, { type: 'tool', name: 'shell' }, { type: 'text', text: `Answer ${index} ${'x'.repeat(size)}` }] }
+  ? { type: 'assistant', content: [{ type: 'reasoning', text: 'hidden' }, { type: 'tool', name: 'shell' }, { type: 'text', text: `Answer ${index} ${Array(size).fill('word').join(' ')}` }] }
   : { type: 'user', text: `Question ${index}` }));
 
 test('a short chat goes as it is; a long one is compressed by OpenCode, and only on request', async () => {
   const short = conversation(4, 10);
-  assert.equal(transcript(short), `User: Question 0\n\nAssistant: Answer 1 ${'x'.repeat(10)}\n\nUser: Question 2\n\nAssistant: Answer 3 ${'x'.repeat(10)}`);
+  assert.equal(transcript(short), `User: Question 0\n\nAssistant: Answer 1 ${Array(10).fill('word').join(' ')}\n\nUser: Question 2\n\nAssistant: Answer 3 ${Array(10).fill('word').join(' ')}`);
   assert.ok(!transcript(short).includes('hidden'), 'reasoning and tools are left out');
   const compacted = [{ type: 'compaction', status: 'completed', summary: 'We planned the water cycle unit.', recent: '' }, ...short];
   assert.match(transcript(compacted), /^Earlier in this chat \(summary\):\nWe planned the water cycle unit\./);
@@ -121,17 +122,22 @@ test('a short chat goes as it is; a long one is compressed by OpenCode, and only
     chatContext: async () => messages,
     summarizeChat: async (prompt) => { summarized += 1; assert.match(prompt, /compressed context/); return summary; },
   });
-  assert.deepEqual(await measureChat(connection(short)), { available: true, characters: transcript(short).length, compressed: false });
+  assert.deepEqual(await measureChat(connection(short)), { available: true, characters: transcript(short).length, words: countWords(transcript(short)), compressed: false });
   const full = await chatSource(connection(short));
   assert.equal(full.how, 'full');
   assert.equal(summarized, 0);
 
-  const long = conversation(6, 4000);
-  assert.deepEqual(await measureChat(connection(long)), { available: true, characters: CHAT_LIMIT, compressed: true });
+  const long = conversation(6, 9000);
+  const longText = transcript(long);
+  assert.ok(countWords(longText) > CHAT_WORD_LIMIT);
+  assert.deepEqual(await measureChat(connection(long)), { available: true, characters: Math.min(longText.length, CHAT_SUMMARY_CHARACTER_LIMIT), words: countWords(longText), compressed: true });
+  assert.equal(summarized, 0, 'listing a long chat does not summarize it');
   const compressed = await chatSource(connection(long));
   assert.deepEqual([compressed.how, compressed.content, summarized], ['compressed', 'Key points.', 1]);
-  assert.ok(compressed.fullCharacters > CHAT_LIMIT);
-  await assert.rejects(chatSource(connection(long, 'y'.repeat(CHAT_LIMIT + 1))), { code: 'CHAT_SUMMARY_FAILED' });
+  assert.equal(compressed.words, 2);
+  assert.equal(compressed.fullWords, countWords(longText));
+  assert.equal(compressed.fullCharacters, longText.length);
+  await assert.rejects(chatSource(connection(long, Array(CHAT_WORD_LIMIT + 1).fill('word').join(' '))), { code: 'CHAT_SUMMARY_FAILED' });
   await assert.rejects(chatSource(connection([])), { code: 'EMPTY_CHAT' });
   assert.deepEqual(await measureChat(connection([])), { available: false, reason: 'This chat has no messages yet.' });
 });
@@ -140,7 +146,7 @@ test('a job can use the chat alone, labelled for the model as the current conver
   const root = await project();
   const jobs = new StudioJobs();
   let prompt = '';
-  const input = { id: randomUUID(), format: 'quiz', sources: [], chat: true, model };
+  const input = { id: randomUUID(), format: 'quiz', sources: [], chat: true, secondPass: false, model };
   const connection = { chatContext: async () => conversation(2, 5), summarizeChat: async () => assert.fail('short chats are not summarized') };
   await jobs.start(root, input, async (text) => { prompt = text; return { text: reply }; }, { connection });
   const record = await settle(jobs, root, input.id);

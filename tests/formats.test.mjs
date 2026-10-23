@@ -14,7 +14,7 @@ import { embeddedFontCss } from '../shared/service/fonts.mjs';
 // Controlled replies exercise parsing, validation and persistence, not model quality.
 const source = await fs.readFile(new URL('../SPEC.md', import.meta.url), 'utf8');
 const model = { providerID: 'unit-test', id: 'controlled-transport' };
-const request = (format) => ({ id: randomUUID(), format, source: { path: 'SPEC.md', content: source }, instructions: '', model });
+const request = (format) => ({ id: randomUUID(), format, source: { path: 'SPEC.md', content: source }, instructions: '', model, secondPass: false });
 const question = { question: 'Which pass is current?', options: ['First', 'Second', 'Third', 'Fourth'], answer: 1, explanation: 'Stated in the source.' };
 
 async function directory() {
@@ -32,10 +32,12 @@ async function settle(jobs, root, id) {
   throw new Error('The controlled test transport did not settle.');
 }
 
-test('catalog shows all 12 formats and implements all but Podcast and Picture', () => {
-  assert.equal(FORMATS.length, 12);
+test('catalog shows 11 formats with only Podcast planned', () => {
+  assert.equal(FORMATS.length, 11);
   assert.deepEqual(IMPLEMENTED.map((format) => format.key).sort(), ['docx', 'flashcards', 'infographic', 'mindmap', 'pdf', 'pptx', 'quiz', 'summary', 'webpage', 'xlsx']);
-  assert.ok(FORMATS.filter((format) => !format.implemented).every((format) => format.reason.startsWith('Not built yet')));
+  const planned = FORMATS.filter((format) => !format.implemented);
+  assert.deepEqual(planned.map((format) => format.key), ['podcast']);
+  assert.ok(planned[0].reason.startsWith('Not built yet'));
   assert.throws(() => validateJob(request('podcast')), { code: 'BAD_FORMAT' });
   // Every prompt carries the complete source; nothing is excerpted.
   for (const format of IMPLEMENTED) assert.ok(format.prompt(validateJob(request(format.key))).includes(JSON.stringify(source)));
@@ -100,10 +102,10 @@ test('structured jobs persist artifacts and progress, and exports match the prev
   assert.equal((await settle(jobs, root, page.id)).status, 'completed');
   await jobs.save(root, page.id, 'page.html');
   const restored = await new StudioJobs().get(root, page.id);
-  // The saved page carries Inter inline; the panel preview supplies the same font itself.
+  // The saved page carries Iosevka inline; the panel preview supplies the same font itself.
   const saved = await fs.readFile(path.join(root, 'page.html'), 'utf8');
   assert.equal(saved, buildWebPage(restored.artifact, webpageMeta(restored), await embeddedFontCss()));
-  assert.ok(saved.includes('font-family: Inter') && saved.includes('data:font/woff2;base64,'));
+  assert.ok(saved.includes('font-family: Iosevka') && saved.includes('data:font/woff2;base64,'));
   await assert.rejects(jobs.save(root, page.id, 'page.html'), { code: 'FILE_EXISTS' });
   await assert.rejects(jobs.save(root, page.id, 'page.md'), { code: 'BAD_FILENAME' });
   await assert.rejects(jobs.saveProgress(root, page.id, { answers: [1] }), { code: 'NO_PROGRESS' });

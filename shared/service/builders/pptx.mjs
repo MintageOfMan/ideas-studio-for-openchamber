@@ -1,9 +1,21 @@
 import PptxGenJS from 'pptxgenjs';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { FONT_FAMILY as FONT } from '../../common/font.mjs';
 import { GENERATOR, normalizeZip, provenance } from './shared.mjs';
 
-// PowerPoint files name the font but this library cannot embed it; Inter shows where it is
+// PowerPoint files name the font but this library cannot embed it; Iosevka shows where it is
 // installed and PowerPoint substitutes elsewhere.
+
+// PptxGenJS hard-codes Arial for slide-master bullets, independently of the deck theme.
+// Match those bullets to the chosen family too; leave the theme's script fallbacks available.
+function setBulletFont(bytes) {
+  const entries = unzipSync(bytes);
+  for (const name of Object.keys(entries)) {
+    if (!/^ppt\/slideMasters\/[^/]+\.xml$/.test(name)) continue;
+    entries[name] = strToU8(strFromU8(entries[name]).replace(/<a:buFont\b[^>]*\/>/g, `<a:buFont typeface="${FONT}"/>`));
+  }
+  return zipSync(entries);
+}
 
 export async function buildPptx(artifact, meta) {
   const deck = new PptxGenJS();
@@ -27,5 +39,5 @@ export async function buildPptx(artifact, meta) {
     page.addText(`${index + 2}`, { x: 12.2, y: 6.9, w: 0.8, h: 0.4, fontFace: FONT, fontSize: 10, color: '888888', align: 'right' });
     if (slide.notes) page.addNotes(slide.notes);
   });
-  return { bytes: normalizeZip(await deck.write({ outputType: 'nodebuffer' }), meta.createdAt), notes: [], pages: artifact.slides.length + 1 };
+  return { bytes: normalizeZip(setBulletFont(await deck.write({ outputType: 'nodebuffer' })), meta.createdAt), notes: [], pages: artifact.slides.length + 1 };
 }

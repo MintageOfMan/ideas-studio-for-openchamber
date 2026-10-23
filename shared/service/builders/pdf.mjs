@@ -3,10 +3,15 @@ import { GENERATOR, provenance } from './shared.mjs';
 import { plural } from '../../common/core.mjs';
 import { boldTtf, regularTtf } from '../fonts.mjs';
 
-// Inter is embedded from the bundled files. pdfkit's standard fonts load metric files from its own
+// Iosevka is embedded from the bundled files. pdfkit's standard fonts load metric files from its own
 // package folder, which does not exist once bundled, so they are never used (font: null).
 const MARGIN = 72;
 const GREY = '#555555';
+// Fontkit 2.0.4 cannot read Iosevka's GSUB type-8 lookups in frac/calt. Disable only these
+// optional substitutions in PDF layout; keep the original fonts, Unicode glyphs and mark
+// positioning. Fraction slashes and programming operators remain ordinary readable text.
+// Fontkit adds active feature flags to this object, so give each text style a fresh one.
+const fontFeatures = () => ({ frac: false, calt: false });
 
 export async function buildPdf(artifact, meta) {
   const [regular, bold] = await Promise.all([regularTtf(), boldTtf()]);
@@ -33,7 +38,7 @@ export async function buildPdf(artifact, meta) {
       return '?';
     }).join('');
   };
-  const write = (text, font, size, options = {}) => doc.fillColor(options.color ?? 'black').font(font).fontSize(size).text(safe(text, font), options);
+  const write = (text, font, size, options = {}) => doc.fillColor(options.color ?? 'black').font(font).fontSize(size).text(safe(text, font), { ...options, features: fontFeatures() });
 
   write(artifact.title, 'bold', 24);
   if (artifact.subtitle) write(artifact.subtitle, 'body', 14, { color: GREY });
@@ -52,7 +57,7 @@ export async function buildPdf(artifact, meta) {
       doc.moveDown(0.4);
       doc.font('body').fontSize(9);
       doc.table({
-        defaultStyle: { padding: 4, border: 0.5, borderColor: '#999999' },
+        defaultStyle: { padding: 4, border: 0.5, borderColor: '#999999', textOptions: { features: fontFeatures() } },
         data: [
           section.table.columns.map((column) => ({ text: safe(column, 'bold'), font: { src: 'bold' }, backgroundColor: '#eeeeee' })),
           ...section.table.rows.map((row) => row.map((value) => safe(value ?? '', 'body'))),
@@ -75,7 +80,7 @@ export async function buildPdf(artifact, meta) {
     // Writing below the bottom margin would otherwise start a new page.
     doc.page.margins.bottom = 0;
     doc.fillColor('#777777').font('body').fontSize(7.5).text(safe(`${provenance(meta)}  Page ${index + 1} of ${range.count}.`, 'body'),
-      MARGIN, doc.page.height - MARGIN + 24, { align: 'center', width: doc.page.width - MARGIN * 2 });
+      MARGIN, doc.page.height - MARGIN + 24, { align: 'center', width: doc.page.width - MARGIN * 2, features: fontFeatures() });
     doc.page.margins.bottom = bottom;
   }
   doc.end();

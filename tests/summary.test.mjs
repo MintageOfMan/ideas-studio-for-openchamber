@@ -16,7 +16,7 @@ const source = await fs.readFile(new URL('../SPEC.md', import.meta.url), 'utf8')
 const transportResult = await fs.readFile(new URL('../README.md', import.meta.url), 'utf8');
 // These transports exercise persistence and failure handling, not LLM quality.
 const model = { providerID: 'unit-test', id: 'controlled-transport' };
-const request = () => ({ id: randomUUID(), format: 'summary', source: { path: 'SPEC.md', content: source }, instructions: '', model });
+const request = () => ({ id: randomUUID(), format: 'summary', source: { path: 'SPEC.md', content: source }, instructions: '', model, secondPass: false });
 async function directory() {
   const parent = path.resolve('temp');
   await fs.mkdir(parent, { recursive: true });
@@ -133,7 +133,8 @@ test('stateless generation advertises the base catalog and preserves the selecte
   let dispatched;
   const gateway = new OpenCodeGateway({ fetch: async (url, options) => {
     if (url.pathname === '/api/info') return Response.json({ version: '2.0.22' });
-    if (url.pathname.startsWith('/api/session/')) return Response.json({ id: sessionId, location: { directory: root }, model });
+    if (url.pathname.startsWith('/api/session/')) return Response.json({ id: sessionId, location: { directory: root }, model, agent: 'build' });
+    if (url.pathname === '/api/agent') return Response.json({ data: [{ id: 'build', name: 'Build', mode: 'primary', hidden: false }] });
     if (url.pathname === '/api/model') {
       catalogScope = decodeURIComponent(options.headers['x-opencode-directory']);
       return Response.json({ data: [{ ...model, name: 'Controlled transport', enabled: true, capabilities: { output: ['text'] } }] });

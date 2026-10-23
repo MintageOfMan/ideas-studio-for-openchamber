@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { LIMITS, modelKey, StudioError } from '../common/core.mjs';
 import { formatFor, validateJob, validateRequest } from '../common/formats.mjs';
+import { reviewPrompt, revisionPrompt, validateReview } from '../common/review.mjs';
 import { CHAT_SOURCE } from '../common/sources.mjs';
 import { chatSource } from './chat.mjs';
 import { readSourceOrExplain } from './sources.mjs';
@@ -23,14 +24,32 @@ const clearOutput = (record) => Object.assign(record, { title: null, markdown: n
 
 export class StudioJobs {
   #active = new Map();
+  #starts = new Map();
   #locks = new Map();
   #uploads = new Map();
+  #buildFile;
+
+  constructor({ build = buildFile } = {}) {
+    this.#buildFile = build;
+  }
 
   // `fallback` is an optional known-good model used once if the chosen model keeps failing.
   // `connection` supplies the chat when the request ticks it. File text is read here, in the
   // job, so the panel sends only paths and slow reads (PDFs, chat summaries) never block it.
   async start(directory, raw, generate, { fallback = null, connection = null } = {}) {
     const request = validateRequest(raw);
+    // Concurrent deliveries of the same request must share one job, including while its
+    // initial record is being written. Capture the options before waiting for that write.
+    const key = `${process.platform === 'win32' ? directory.toLowerCase() : directory}\0${request.id}`;
+    const previous = this.#starts.get(key) ?? Promise.resolve();
+    const recoveryModel = fallback ? structuredClone(fallback) : null;
+    const started = previous.catch(() => {}).then(() => this.#start(directory, request, generate, recoveryModel, connection));
+    this.#starts.set(key, started);
+    try { return await started; }
+    finally { if (this.#starts.get(key) === started) this.#starts.delete(key); }
+  }
+
+  async #start(directory, request, generate, fallback, connection) {
     const format = formatFor(request.format);
     const fingerprint = digest(JSON.stringify(request));
     try {
@@ -50,7 +69,8 @@ export class StudioJobs {
       // Filled in with sizes and MD5s once the sources are read.
       source: { path: label.length === 1 ? label[0] : `${label[0]} + ${label.length - 1} more` },
       sources: request.sources.map((source) => ({ path: source.path })), chat: request.chat ? { how: 'pending' } : null,
-      instructions: request.instructions, choice: request.choice, model: request.model, requestedModel: request.model, attempts: [],
+      instructions: request.instructions, choice: request.choice, secondPass: request.secondPass, agent: connection?.agent ?? null,
+      model: request.model, requestedModel: request.model, attempts: [],
       title: null, markdown: null, artifact: null, notes: [], file: null, progress: null, savedPath: null, error: null,
     };
     const controller = new AbortController();
@@ -80,7 +100,9 @@ export class StudioJobs {
     if (request.chat) {
       if (!connection) throw new StudioError('NO_CHAT', 'Open the chat in OpenChamber to include it.');
       const chat = await chatSource(connection, controller.signal);
-      record.chat = { how: chat.how, characters: chat.characters, md5: chat.md5, ...(chat.fullCharacters ? { fullCharacters: chat.fullCharacters } : {}) };
+      record.chat = { how: chat.how, characters: chat.characters, words: chat.words, md5: chat.md5,
+        ...(chat.fullCharacters ? { fullCharacters: chat.fullCharacters } : {}),
+        ...(Number.isFinite(chat.fullWords) ? { fullWords: chat.fullWords } : {}) };
       sources.push({ path: CHAT_SOURCE, content: chat.content });
     }
     const input = validateJob({ ...request, sources });
@@ -89,83 +111,129 @@ export class StudioJobs {
     return input;
   }
 
-  // One model call, parsed and built. Throws a StudioError describing what went wrong.
-  async #attempt(job, input, format, generate, model) {
+  // One actual model call. Drafts and criticism stay local to #run; only the last stage
+  // may invoke a file builder, and even its output stays private until it is ready.
+  async #attempt(job, input, format, generate, model, stage, prompt, final) {
     const { directory, record, controller } = job;
-    const timeout = AbortSignal.timeout(ATTEMPT_MS);
-    let text;
-    try {
-      ({ text } = await generate(format.prompt(input), model, AbortSignal.any([controller.signal, timeout])));
-    } catch (error) {
-      if (error instanceof StudioError) throw error;
-      // Provider errors can contain request bodies or credentials. Only our own messages leave the service.
-      throw timeout.aborted
-        ? new StudioError('MODEL_TIMEOUT', 'Generation timed out. The provider may have billed work already started.')
-        : new StudioError('MODEL_FAILED', 'Generation failed. Check this model and its connection in OpenChamber.');
-    }
     if (controller.signal.aborted) return;
-    if (typeof text !== 'string' || !text.trim()) {
-      // Seen live with a reasoning-heavy variant through OpenCode's stateless route.
-      throw new StudioError('EMPTY_RESULT', 'The model returned no text.');
-    }
-    if (text.length > LIMITS.output) throw new StudioError('OUTPUT_TOO_LARGE', 'The model response exceeds this build\'s output limit. It was not truncated.');
-    const built = format.build(text, input);
-    Object.assign(record, { title: built.title, markdown: built.markdown, artifact: built.artifact ?? null, notes: built.notes ?? [], model });
-    if (JSON.stringify(this.public(record)).length > LIMITS.response) {
-      throw new StudioError('OUTPUT_TOO_LARGE', 'This artifact is too large for the host bridge. It was not truncated.');
-    }
-    if (format.binary) {
-      await this.#storeFile(directory, record, format);
-      if (JSON.stringify(this.public(record)).length > LIMITS.response) {
-        throw new StudioError('OUTPUT_TOO_LARGE', 'This artifact is too large for the host bridge. It was not truncated.');
+    const timeout = AbortSignal.timeout(ATTEMPT_MS);
+    const attempt = { stage, model, outcome: 'running' };
+    record.attempts.push(attempt);
+    try {
+      let text;
+      try {
+        ({ text } = await generate(prompt, model, AbortSignal.any([controller.signal, timeout])));
+      } catch (error) {
+        // Provider errors can contain request bodies or credentials. Only our own messages leave the service.
+        if (timeout.aborted) throw new StudioError('MODEL_TIMEOUT', 'Generation timed out. The provider may have billed work already started.');
+        if (error instanceof StudioError) throw error;
+        throw new StudioError('MODEL_FAILED', 'Generation failed. Check this model and its connection in OpenChamber.');
       }
+      if (controller.signal.aborted) return;
+      // A late reply from a transport that ignored the timeout cannot complete the attempt.
+      if (timeout.aborted) throw new StudioError('MODEL_TIMEOUT', 'Generation timed out. The provider may have billed work already started.');
+      if (typeof text !== 'string' || !text.trim()) {
+        throw new StudioError('EMPTY_RESULT', 'The model returned no text.');
+      }
+      if (text.length > LIMITS.output) throw new StudioError('OUTPUT_TOO_LARGE', 'The model response exceeds this build\'s output limit. It was not truncated.');
+      if (stage === 'review') {
+        const criticism = validateReview(text);
+        attempt.outcome = 'completed';
+        return criticism;
+      }
+      const built = format.build(text, input);
+      const candidate = { ...record, title: built.title, markdown: built.markdown, artifact: built.artifact ?? null, notes: built.notes ?? [], file: null, model };
+      this.#checkSize(candidate);
+      if (final && format.binary) await this.#storeFile(directory, candidate, format, controller.signal);
+      if (controller.signal.aborted) return;
+      attempt.outcome = 'completed';
+      return { title: candidate.title, markdown: candidate.markdown, artifact: candidate.artifact, notes: candidate.notes, file: candidate.file };
+    } catch (error) {
+      const failure = error instanceof StudioError ? error : new StudioError('STUDIO_FAILED', 'Studio could not finish this request.');
+      attempt.outcome = failure.code;
+      throw failure;
+    } finally {
+      if (controller.signal.aborted) attempt.outcome = record.status === 'interrupted' ? 'interrupted' : 'cancelled';
+    }
+  }
+
+  #checkSize(record) {
+    // Include completion metadata before any file write, including the current attempt's
+    // final outcome, so a near-limit reply cannot grow past the bridge limit at publication.
+    const completed = { ...record, status: 'completed', completedAt: new Date().toISOString(),
+      attempts: record.attempts.map((attempt) => attempt.outcome === 'running' ? { ...attempt, outcome: 'completed' } : attempt) };
+    if (JSON.stringify(this.public(completed)).length > LIMITS.response) {
+      throw new StudioError('OUTPUT_TOO_LARGE', 'This artifact is too large for the host bridge. It was not truncated.');
     }
   }
 
   async #run(job, request, format, generate, fallback, connection) {
     const { directory, record, controller } = job;
-    // Recover quietly: the chosen model gets a second try, then a known-good model gets one.
-    // At most three billable calls per request; every attempt is recorded for the details view.
-    const plan = [request.model, request.model];
-    if (fallback && modelKey(fallback) !== modelKey(request.model)) plan.push(fallback);
-    let lastError = null;
+    // One shared recovery ladder, never reset between stages: retry the chosen model once,
+    // then use a distinct known-good model once. Successful stages carry their model forward.
+    // Three required calls with Second pass (one without), plus at most two recovery calls.
+    const recovery = [request.model];
+    if (fallback && modelKey(fallback) !== modelKey(request.model)) recovery.push(fallback);
+    let nextRecovery = 0;
+    let model = request.model;
+    let draft = null;
+    let criticism = null;
     try {
+      if (controller.signal.aborted) return;
       record.status = 'running';
       await writeRecord(directory, record);
-      let input = null;
+      let input;
       try { input = await this.#resolve(job, request, connection); }
       catch (error) {
         if (controller.signal.aborted) return;
-        lastError = error instanceof StudioError ? error : new StudioError('SOURCE_FAILED', 'Studio could not read the selected sources.');
+        throw error instanceof StudioError ? error : new StudioError('SOURCE_FAILED', 'Studio could not read the selected sources.');
       }
-      for (let index = 0; input && index < plan.length; index += 1) {
+      const stages = request.secondPass ? ['draft', 'review', 'revision'] : ['draft'];
+      for (const stage of stages) {
         if (controller.signal.aborted) return;
-        // A model the host refuses outright will not do better on a second try.
-        if (index === 1 && lastError?.code === 'MODEL_CONFIGURATION_REJECTED') continue;
-        try {
-          await this.#attempt(job, input, format, generate, plan[index]);
+        const final = stage === stages.at(-1);
+        const prompt = stage === 'review' ? reviewPrompt(input, format, draft)
+          : stage === 'revision' ? revisionPrompt(input, format, draft, criticism) : format.prompt(input);
+        for (;;) {
           if (controller.signal.aborted) return;
-          record.attempts.push({ model: plan[index], outcome: 'completed' });
-          lastError = null;
-          break;
-        } catch (error) {
-          if (controller.signal.aborted) return;
-          lastError = error instanceof StudioError ? error : new StudioError('STUDIO_FAILED', 'Studio could not finish this request.');
-          clearOutput(record);
-          record.attempts.push({ model: plan[index], outcome: lastError.code });
-          if (!RETRYABLE.has(lastError.code)) break;
-          await writeRecord(directory, record);
+          try {
+            const result = await this.#attempt(job, input, format, generate, model, stage, prompt, final);
+            if (controller.signal.aborted) return;
+            record.model = model;
+            if (final) Object.assign(record, result);
+            else {
+              if (stage === 'draft') draft = result;
+              else criticism = result;
+              await writeRecord(directory, record);
+            }
+            break;
+          } catch (error) {
+            if (controller.signal.aborted) return;
+            if (!RETRYABLE.has(error.code)) throw error;
+            // A model the host refuses outright will not do better on a repeated call.
+            while (nextRecovery < recovery.length && error.code === 'MODEL_CONFIGURATION_REJECTED'
+                && modelKey(recovery[nextRecovery]) === modelKey(model)) nextRecovery += 1;
+            if (nextRecovery >= recovery.length) throw error;
+            model = recovery[nextRecovery++];
+            await writeRecord(directory, record);
+          }
         }
       }
-      if (lastError) {
-        record.status = 'failed';
-        record.error = { code: lastError.code, message: lastError.message };
-      } else {
-        record.status = 'completed';
-        record.completedAt = new Date().toISOString();
-      }
+      record.status = 'completed';
+      record.completedAt = new Date().toISOString();
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      const failure = error instanceof StudioError ? error : new StudioError('STUDIO_FAILED', 'Studio could not finish this request.');
+      clearOutput(record);
+      record.status = 'failed';
+      record.error = { code: failure.code, message: failure.message };
     } finally {
-      try { await writeRecord(directory, record); }
+      try {
+        // Cancel/stop already captured the terminal attempt outcomes. A late transport
+        // reply must share that write, not replace the same cancelled record a second time.
+        if (controller.signal.aborted && job.terminalWrite) await job.terminalWrite;
+        else await writeRecord(directory, record);
+      }
       catch {
         clearOutput(record);
         record.status = 'failed';
@@ -176,20 +244,23 @@ export class StudioJobs {
     }
   }
 
-  // The file is built once from the validated artifact; export copies these exact bytes.
-  async #storeFile(directory, record, format) {
+  // Only the final candidate reaches the trusted builder. Check its preview and cancellation
+  // before writing any bytes; export later copies these exact bytes.
+  async #storeFile(directory, record, format, signal) {
     let built;
-    try { built = await buildFile(format.key, record.artifact, fileMeta(record)); }
-    catch (error) {
-      console.error(`Studio could not build a ${format.label} file: ${error?.message}`);
+    try { built = await this.#buildFile(format.key, record.artifact, fileMeta(record)); }
+    catch {
+      console.error(`Studio could not build a ${format.label} file.`);
       throw new StudioError('BUILD_FAILED', `Studio could not build the ${format.label} file from this reply. Nothing was saved; regenerate explicitly.`);
     }
+    if (signal.aborted) return;
     if (built.bytes.length > FILE_BYTES) throw new StudioError('OUTPUT_TOO_LARGE', `The ${format.label} file exceeds this build's size limit.`);
     record.notes = [...record.notes, ...built.notes];
     // A light preview (infographics) travels with the artifact so the panel can show it.
     if (built.preview) record.artifact = { ...record.artifact, svg: built.preview };
-    const name = await writeArtifactFile(directory, record, format.extension, built.bytes);
-    record.file = { name, bytes: built.bytes.length, md5: digest(built.bytes), pages: built.pages };
+    record.file = { name: `${record.id}.${format.extension}`, bytes: built.bytes.length, md5: digest(built.bytes), pages: built.pages };
+    this.#checkSize(record);
+    await writeArtifactFile(directory, record, format.extension, built.bytes);
   }
 
   async get(directory, id) {
@@ -235,8 +306,11 @@ export class StudioJobs {
       throw new StudioError('NOT_RUNNING', 'This Studio process has no running job with that identifier.', 409);
     }
     job.record.status = 'cancelled';
+    clearOutput(job.record);
+    for (const attempt of job.record.attempts) if (attempt.outcome === 'running') attempt.outcome = 'cancelled';
+    job.terminalWrite = writeRecord(directory, job.record);
     job.controller.abort();
-    await writeRecord(directory, job.record);
+    await job.terminalWrite;
     return this.public(job.record);
   }
 
@@ -309,10 +383,14 @@ export class StudioJobs {
 
   async stop() {
     await Promise.all([...this.#active.values()].map(async (job) => {
+      if (!unfinished(job.record)) { await job.terminalWrite; return; }
       job.record.status = 'interrupted';
       job.record.error = { code: 'INTERRUPTED', message: 'Studio stopped before this job completed.' };
+      clearOutput(job.record);
+      for (const attempt of job.record.attempts) if (attempt.outcome === 'running') attempt.outcome = 'interrupted';
+      job.terminalWrite = writeRecord(job.directory, job.record);
       job.controller.abort();
-      await writeRecord(job.directory, job.record);
+      await job.terminalWrite;
     }));
   }
 }

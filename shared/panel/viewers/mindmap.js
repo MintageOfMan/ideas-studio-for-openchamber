@@ -1,5 +1,6 @@
 import { mountButton } from '@openchamber/sdk/ui';
 import { Markmap } from 'markmap-view';
+import { FONT_STACK } from '../../common/font.mjs';
 import { escapeHtml } from '../../common/webpage.mjs';
 import { el, slot } from './dom.js';
 
@@ -11,6 +12,7 @@ export function renderMindmap(container, record) {
   const canvas = el('div', 'mindmap');
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'mindmap-svg');
+  svg.style.setProperty('--markmap-font', `400 16px/20px ${FONT_STACK}`);
   svg.setAttribute('role', 'img');
   svg.setAttribute('aria-label', `Mind map: ${record.artifact.title}. Click a node's circle to collapse or expand it.`);
   canvas.append(svg);

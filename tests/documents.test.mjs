@@ -11,7 +11,7 @@ import { StudioJobs } from '../shared/service/jobs.mjs';
 
 // Controlled replies only: these check validation, the built files and persistence, not model quality.
 const model = { providerID: 'unit-test', id: 'controlled-transport' };
-const request = (format) => ({ id: randomUUID(), format, source: { path: 'SPEC.md', content: 'Source text.' }, instructions: '', model });
+const request = (format) => ({ id: randomUUID(), format, source: { path: 'SPEC.md', content: 'Source text.' }, instructions: '', model, secondPass: false });
 const meta = (notes = []) => ({ title: 'T', source: 'SPEC.md', model: 'unit-test/controlled', createdAt: new Date('2026-10-06T12:00:00Z'), notes });
 const md5 = (bytes) => createHash('md5').update(bytes).digest('hex');
 const documentReply = {

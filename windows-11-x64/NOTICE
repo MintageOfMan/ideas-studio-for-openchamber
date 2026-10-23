@@ -24,10 +24,15 @@ Apache-2.0, including PDF.js by Mozilla, which publishes no NOTICE file; DOMPuri
 dual licenses). Their license texts are reproduced in each folder's
 THIRD-PARTY-LICENSES.txt.
 
-This product bundles the Inter typeface 4.1 (https://github.com/rsms/inter),
-Copyright (c) 2016 The Inter Project Authors, licensed under the SIL Open Font
-License, Version 1.1 (shared/fonts/Inter-LICENSE.txt). The font is not covered
-by the Apache License; it remains under the SIL Open Font License.
+This product bundles standard Iosevka 34.9.0, Normal width, Upright Regular
+and Bold (https://typeof.net/Iosevka/; https://github.com/be5invis/Iosevka),
+Copyright (c) 2015-2026, Renzhi Li (aka. Belleve Invis, belleve@typeof.net),
+licensed under the SIL Open Font License, Version 1.1
+(shared/fonts/Iosevka-LICENSE.txt). The TTF and WOFF2 files are unmodified
+official release files; source URLs and hashes are in
+shared/fonts/Iosevka-SOURCE.json and the distributed third-party notices.
+The font is not covered by the Apache License; it remains under the SIL
+Open Font License.
 
 "SurfSense", "OpenChamber", "OpenCode", "NotebookLM", "Gemini" and other names are
 trademarks of their respective owners. This project is independent and is not

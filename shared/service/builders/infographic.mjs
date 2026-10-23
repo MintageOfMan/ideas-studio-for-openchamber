@@ -1,5 +1,5 @@
 // Draws an infographic artifact to SVG through the worker thread, then makes it self-contained:
-// the library's links to its own web font are removed and Inter is embedded instead.
+// the library's links to its own web font are removed and Iosevka is embedded instead.
 import { Worker } from 'node:worker_threads';
 import { libraryOptions } from '../../common/infographic.mjs';
 import { embeddedFontCss } from '../fonts.mjs';
@@ -51,7 +51,7 @@ function render(options) {
 // Strips the XML prolog and font stylesheet links, which point at the library's CDN font.
 const clean = (svg) => svg.replace(/^\s*<\?xml[^>]*\?>\s*/, '').replace(/<\?xml-stylesheet[^>]*\?>\s*/g, '').trim();
 
-// Returns the saved file (Inter embedded, so it looks the same in any viewer) and a light
+// Returns the saved file (Iosevka embedded for viewers that support embedded fonts) and a light
 // preview without the font, small enough for the panel bridge; the panel supplies the font.
 export async function buildInfographicFile(artifact) {
   const preview = clean(await render(libraryOptions(artifact)));
